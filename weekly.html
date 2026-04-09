@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>Haftalik</title>
+<script type="module" src="assets/js/firebase.js?v=20260409-2"></script>
+<script src="assets/js/app-shell.js?v=20260409-2"></script>
+<script type="module" src="assets/js/auth.js?v=20260409-2"></script>
+<link rel="stylesheet" href="assets/css/tokens.css?v=20260409-2">
+<link rel="stylesheet" href="assets/css/base.css?v=20260409-2">
+<link rel="stylesheet" href="assets/css/components.css?v=20260409-2">
+<link rel="stylesheet" href="assets/css/pages/weekly.css?v=20260409-2">
+</head>
+<body class="portrait">
+  <div class="appShell">
+    <button type="button" class="floatingBack" aria-label="Geri dön" title="Geri">
+      <span class="icon">arrow_back</span>
+    </button>
+
+    <div class="appFrame">
+      <div class="appBorder">
+        <div class="appInner">
+          <div class="pageTitle weekPageTitle">
+            <span class="icon">view_week</span>
+            <span class="weekPageTitleText">HAFTALIK PROGRAM</span>
+          </div>
+
+          <div class="card">
+            <div id="grid" class="grid"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="nav">
+      <div class="navItem" data-nav="index">
+        <span class="icon">today</span>
+        GÜNLÜK
+      </div>
+      <div class="navItem" data-nav="weekly">
+        <span class="icon">view_week</span>
+        HAFTALIK
+      </div>
+      <div class="navItem" data-nav="notes">
+        <span class="icon">edit_note</span>
+        NOTLAR
+      </div>
+      <div class="navItem" data-nav="settings">
+        <span class="icon">settings</span>
+        AYARLAR
+      </div>
+    </div>
+  </div>
+
+<script>
+const STORAGE_KEY = "ayarlar";
+const ALL_DAYS = AppShell.DAY_NAMES;
+
+function createCell(className, contentHTML = ""){
+  const el = document.createElement("div");
+  el.className = className;
+  if(contentHTML) el.innerHTML = contentHTML;
+  return el;
+}
+
+function loadAppData(){
+  return AppShell.safeJsonParse(localStorage.getItem(STORAGE_KEY), null);
+}
+
+function generateTimeSlots(count, settings){
+  const start = (settings?.start || "08:15").split(":");
+  const duration = parseInt(settings?.duration ?? 40, 10);
+  const breakDuration = parseInt(settings?.break ?? 10, 10);
+  const lunch = parseInt(settings?.lunch ?? 45, 10);
+  const lunchNo = parseInt(settings?.lunchNo ?? 5, 10);
+  const timeMode = settings?.timeMode || "Giris-Cikis";
+
+  let hour = parseInt(start[0] || "8", 10);
+  let minute = parseInt(start[1] || "15", 10);
+  const slots = [];
+
+  for(let index = 0; index < count; index += 1){
+    const startText = String(hour).padStart(2, "0") + ":" + String(minute).padStart(2, "0");
+    let endHour = hour;
+    let endMinute = minute + duration;
+
+    endHour += Math.floor(endMinute / 60);
+    endMinute %= 60;
+    const endText = String(endHour).padStart(2, "0") + ":" + String(endMinute).padStart(2, "0");
+
+    slots.push(timeMode === "Giris-Cikis" ? startText + "-" + endText : startText);
+
+    minute += duration;
+    hour += Math.floor(minute / 60);
+    minute %= 60;
+
+    if(index + 1 === lunchNo) minute += lunch;
+    else minute += breakDuration;
+
+    hour += Math.floor(minute / 60);
+    minute %= 60;
+  }
+
+  return slots;
+}
+
+function lessonColorOf(appData, lessonName, fallbackColor){
+  if(fallbackColor) return fallbackColor;
+  const list = appData?.lessons || [];
+  const found = list.find((entry) => (entry?.name || "") === (lessonName || ""));
+  return found?.color || appData?.lastColor || "#ff7a00";
+}
+
+function dayShort(day){
+  const map = {
+    Pazartesi: "Pzt",
+    Salı: "Sal",
+    Çarşamba: "Çar",
+    Perşembe: "Per",
+    Cuma: "Cum",
+    Cumartesi: "Cmt",
+    Pazar: "Paz"
+  };
+  return map[day] || day;
+}
+
+function startTimeOf(slotText){
+  const raw = (slotText || "").trim();
+  if(!raw) return "";
+  return raw.split("-")[0] || raw;
+}
+
+function abbrLessonName(name, portrait){
+  const raw = (name || "").toString().trim();
+  if(!raw) return "";
+
+  const parts = raw.split(/\s+/).filter(Boolean);
+  if(portrait){
+    if(parts.length === 1){
+      return parts[0].length <= 5 ? parts[0].toUpperCase() : parts[0].substring(0, 5).toUpperCase();
+    }
+
+    if(parts.length === 2){
+      return (parts[0][0] + "." + parts[1].substring(0, 3)).toUpperCase();
+    }
+
+    return parts.map((part) => part[0]).join("").toUpperCase();
+  }
+
+  const ignoreWords = ["ve", "ile", "veya", "da", "de"];
+  const filtered = parts.filter((part) => !ignoreWords.includes(part.toLowerCase()));
+
+  if(filtered.length === 1) return filtered[0];
+  if(filtered.length === 2) return filtered[0][0].toUpperCase() + ". " + filtered[1];
+  if(filtered.length === 3) return filtered[0][0].toUpperCase() + filtered[1][0].toUpperCase() + ". " + filtered[2];
+  if(filtered.length > 3) return filtered.map((part) => part[0]).join("").toUpperCase();
+
+  return raw;
+}
+
+function renderLessonHTML(role, cls, lessonText, lessonColor){
+  if(role === "student"){
+    return '<div class="lessonPreview">' +
+             '<div class="lessonPreviewLesson" style="color:' + lessonColor + '">' + lessonText + "</div>" +
+           "</div>";
+  }
+
+  return [
+    '<div class="lessonPreview">',
+    '<div class="lessonPreviewClass">' + cls + "</div>",
+    '<div class="lessonPreviewLesson" style="color:' + lessonColor + '">' + lessonText + "</div>",
+    "</div>"
+  ].join("");
+}
+
+function renderGrid(){
+  const isLandscape = window.matchMedia("(orientation: landscape)").matches;
+  const portrait = !isLandscape;
+  document.body.classList.toggle("portrait", portrait);
+
+  const grid = document.getElementById("grid");
+  grid.innerHTML = "";
+  grid.style.removeProperty("--portrait-lesson-font");
+
+  const appData = loadAppData();
+  const role = appData?.settings?.role || "teacher";
+  const isGuest = AppShell.isGuestUser(appData);
+  const active = isGuest
+    ? (appData?.activeDays?.length ? appData.activeDays : [0, 1, 2, 3, 4])
+    : (appData?.activeDays?.length ? appData.activeDays : [0, 1, 2, 3, 4]);
+  const daysShown = active.map((index) => ALL_DAYS[index]).filter(Boolean);
+
+  let slotCount = 0;
+  daysShown.forEach((day) => {
+    const rows = AppShell.getScheduleRowsForDay(appData, day);
+    slotCount = Math.max(slotCount, rows.length);
+  });
+  if(!slotCount) slotCount = 8;
+
+  const settings = Object.assign({}, appData?.settings || {});
+  const timeSlots = generateTimeSlots(slotCount, settings);
+  const lunchAfter = Math.max(0, parseInt(appData?.settings?.lunchNo ?? 5, 10));
+  const hasLunchBreak = lunchAfter > 0 && lunchAfter < slotCount;
+  const leftColWidth = portrait ? "44px" : "58px";
+  const dayColWidth = "minmax(0, 1fr)";
+
+  grid.style.gridTemplateColumns = leftColWidth + " repeat(" + Math.max(daysShown.length, 1) + ", " + dayColWidth + ")";
+  grid.style.gridTemplateRows = portrait ? "34px" : "22px";
+
+  const rowsTemplate = [];
+  for(let slotIndex = 0; slotIndex < slotCount; slotIndex += 1){
+    rowsTemplate.push(portrait ? "50px" : "minmax(0, 1fr)");
+    if(hasLunchBreak && slotIndex + 1 === lunchAfter){
+      rowsTemplate.push(portrait ? "28px" : "minmax(0, 0.7fr)");
+    }
+  }
+  grid.style.gridTemplateRows += " " + rowsTemplate.join(" ");
+
+  grid.appendChild(createCell("cell cornerCell headRow"));
+
+  daysShown.forEach((dayName, dayIndex) => {
+    const cell = createCell("cell headCell headRow");
+    if(dayIndex === 0) cell.classList.add("headStart");
+    if(dayIndex === daysShown.length - 1) cell.classList.add("headEnd");
+    cell.textContent = portrait ? dayShort(dayName) : dayName;
+    grid.appendChild(cell);
+  });
+
+  for(let slotIndex = 0; slotIndex < slotCount; slotIndex += 1){
+    const timeCell = createCell("cell timeCell");
+    if(slotIndex === 0) timeCell.classList.add("timeStart");
+    if(slotIndex === slotCount - 1) timeCell.classList.add("timeEnd");
+    timeCell.innerHTML = '<div class="lessonIndex">' + (slotIndex + 1) + '</div><div class="time">' + startTimeOf(timeSlots[slotIndex] || "") + "</div>";
+    grid.appendChild(timeCell);
+
+    daysShown.forEach((dayName, dayIndex) => {
+      const cell = createCell("cell lessonCell");
+      const dayRows = AppShell.getScheduleRowsForDay(appData, dayName);
+      const currentRow = dayRows.find((row) => row?.timeIdx === slotIndex) || dayRows[slotIndex] || null;
+
+      if(dayIndex === daysShown.length - 1) cell.classList.add("lastCol");
+      if(slotIndex === slotCount - 1 && !hasLunchBreak) cell.classList.add("lastRow");
+
+      if(currentRow){
+        const cls = (currentRow.class || "").trim();
+        const lesson = (currentRow.lesson || "").trim();
+        const lessonText = abbrLessonName(lesson, portrait);
+        const lessonColor = lessonColorOf(appData, lesson, currentRow.color);
+        cell.innerHTML = renderLessonHTML(role, cls, lessonText, lessonColor);
+      }
+
+      grid.appendChild(cell);
+    });
+
+    if(hasLunchBreak && slotIndex + 1 === lunchAfter){
+      const lunchCell = createCell("cell lunchBreakRow");
+      lunchCell.style.gridColumn = "2 / -1";
+      lunchCell.textContent = "ÖĞLE ARASI";
+      grid.appendChild(lunchCell);
+    }
+  }
+}
+
+window.addEventListener("resize", renderGrid);
+renderGrid();
+
+const floatingBack = document.querySelector(".floatingBack");
+if(floatingBack){
+  floatingBack.addEventListener("click", () => {
+    if(window.history.length > 1){
+      window.history.back();
+      return;
+    }
+
+    window.location.replace("index.html");
+  });
+}
+</script>
+</body>
+</html>

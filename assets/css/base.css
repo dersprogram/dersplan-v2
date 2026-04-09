@@ -1,0 +1,54 @@
+@font-face{
+  font-family: "Material Symbols Rounded";
+  src: url("../../font/material-symbols-rounded-latin-400-normal.woff2") format("woff2");
+  font-weight: normal;
+  font-style: normal;
+  font-display: block;
+}
+
+*,
+*::before,
+*::after{
+  box-sizing: border-box;
+}
+
+html{
+  height: 100%;
+  overflow-x: hidden;
+  font-size: var(--base-font-size);
+}
+
+body{
+  min-height: 100dvh;
+  margin: 0;
+  overflow-x: hidden;
+  padding-bottom: calc(var(--nav-height) + 42px);
+  font-family: var(--font-family-base);
+  color: var(--text-primary);
+  background:
+    radial-gradient(900px 520px at 50% -220px, rgba(var(--color-accent-rgb), .14), transparent 62%),
+    radial-gradient(1200px 900px at 50% 120%, rgba(120,160,255,.08), transparent 55%),
+    linear-gradient(180deg, var(--color-bg-app), var(--color-bg-surface));
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+}
+
+button,
+input,
+select,
+textarea{
+  font: inherit;
+  font-family: var(--font-family-base);
+}
+
+button{
+  cursor: pointer;
+}
+
+a{
+  color: inherit;
+}
+
+*{
+  -webkit-tap-highlight-color: transparent;
+}

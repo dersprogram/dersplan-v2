@@ -1,0 +1,128 @@
+:root{
+  --base-font-size: 15px;
+
+  --bg0: #050912;
+  --bg1: #0b1220;
+
+  --frame-gap: 12px;
+  --frame-radius: 26px;
+  --frame-padding: 18px;
+  --card-radius: 14px;
+
+  --nav-height: 62px;
+  --nav-size: 0.8rem;
+  --title-size: 1.15rem;
+
+  --font-family-base:
+    "Segoe UI",
+    system-ui,
+    -apple-system,
+    Roboto,
+    Arial,
+    sans-serif;
+
+  --font-xs: 0.75rem;
+  --font-sm: 0.86rem;
+  --font-md: 0.95rem;
+  --font-lg: 1.15rem;
+  --font-xl: 1.55rem;
+  --font-xxl: 1.6rem;
+
+  --shadow: 0 22px 70px rgba(0,0,0,.60);
+}
+
+:root[data-theme="dark"]{
+  --color-bg-app: #050912;
+  --color-bg-surface: #0b1220;
+  --color-bg-card: #0e1624;
+
+  --color-panel-top: rgba(14,18,28,.96);
+  --color-panel-bottom: rgba(10,14,22,.96);
+
+  --panelTop: rgba(255,255,255,.06);
+  --panelBot: rgba(255,255,255,.03);
+  --line: rgba(255,255,255,.12);
+
+  --text-primary: rgba(255,255,255,.92);
+  --text-secondary: rgba(255,255,255,.75);
+  --text-muted: rgba(255,255,255,.55);
+  --text-inverse: #14181f;
+
+  --border-thin: rgba(255,255,255,.05);
+  --border-normal: rgba(255,255,255,.14);
+  --border-strong: rgba(255,255,255,.18);
+  --ctrl-border: rgba(255,255,255,.14);
+
+  --color-accent-rgb: 255,122,0;
+  --color-accent: #ff7a00;
+  --color-accent-soft: rgba(var(--color-accent-rgb), .15);
+  --color-accent-strong: #ff7a00;
+  --color-accent-deep: #ff7a00;
+  --color-accent-border: rgba(var(--color-accent-rgb), .58);
+  --color-accent-outline: rgba(var(--color-accent-rgb), .18);
+  --color-accent-ring: rgba(var(--color-accent-rgb), .10);
+  --accent-contrast: #1b1209;
+
+  --color-info: #3b82f6;
+  --color-danger: #ef4444;
+
+  --grid-line: rgba(255,255,255,.16);
+  --grid-strong: rgba(255,255,255,.30);
+  --color-row-bg: rgba(0,0,0,.18);
+  --bg-input: rgba(255,255,255,.04);
+  --surface-soft: rgba(255,255,255,.05);
+
+  color-scheme: dark;
+}
+
+:root[data-theme="light"]{
+  --color-bg-app: #f4f6f9;
+  --color-bg-surface: #ffffff;
+  --color-bg-card: #ffffff;
+
+  --color-panel-top: rgba(255,255,255,.94);
+  --color-panel-bottom: rgba(245,247,250,.96);
+
+  --panelTop: rgba(0,0,0,.03);
+  --panelBot: rgba(0,0,0,.015);
+  --line: rgba(0,0,0,.10);
+
+  --text-primary: #111827;
+  --text-secondary: #1f2937;
+  --text-muted: #4b5563;
+  --text-inverse: #ffffff;
+
+  --border-thin: rgba(0,0,0,.06);
+  --border-normal: rgba(0,0,0,.10);
+  --border-strong: rgba(0,0,0,.16);
+  --ctrl-border: rgba(0,0,0,.12);
+
+  --color-accent-rgb: 255,122,0;
+  --color-accent: #ff7a00;
+  --color-accent-soft: rgba(var(--color-accent-rgb), .12);
+  --color-accent-strong: #ff7a00;
+  --color-accent-deep: #ff7a00;
+  --color-accent-border: rgba(var(--color-accent-rgb), .58);
+  --color-accent-outline: rgba(var(--color-accent-rgb), .18);
+  --color-accent-ring: rgba(var(--color-accent-rgb), .10);
+  --accent-contrast: #20150c;
+
+  --color-info: #2563eb;
+  --color-danger: #dc2626;
+
+  --grid-line: rgba(0,0,0,.10);
+  --grid-strong: rgba(0,0,0,.18);
+  --color-row-bg: rgba(0,0,0,.04);
+  --bg-input: rgba(0,0,0,.025);
+  --surface-soft: rgba(0,0,0,.03);
+
+  color-scheme: light;
+}
+
+@media (max-width:480px){
+  :root{
+    --frame-gap: 10px;
+    --frame-radius: 22px;
+    --frame-padding: 14px;
+  }
+}
