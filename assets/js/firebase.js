@@ -36,3 +36,4 @@ export const auth = initializeAuth(app, {
   persistence: browserLocalPersistence,
   popupRedirectResolver: browserPopupRedirectResolver
 });
+window.AppAuth = auth;

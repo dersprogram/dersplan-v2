@@ -112,14 +112,14 @@ body.portrait .cell{
   white-space: nowrap;
   font-weight: 800;
   color: var(--text-secondary);
-  letter-spacing: .01em;
+  letter-spacing: .03em;
   background: transparent;
   border-color: transparent;
   box-shadow: none;
   border-radius: 0;
   text-transform: none;
-  padding: 4px 2px 2px;
-  align-items: flex-end;
+  padding: 8px 2px 6px;
+  align-items: center;
 }
 
 .headCell{
