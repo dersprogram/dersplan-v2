@@ -1415,7 +1415,9 @@ document.querySelectorAll(".card-head").forEach(head => {
     }, 200);
   });
 });
-
+window.addEventListener("load", () => {
+  document.body.classList.add("loaded");
+});
 </script>
 </body>
 </html>

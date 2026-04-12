@@ -1,4 +1,11 @@
 body{
+  visibility: hidden;
+}
+body.loaded{
+  visibility: visible;
+}
+
+body{
   padding-bottom: calc(var(--nav-height) + 42px);
 }
 
@@ -42,11 +49,12 @@ body{
   padding: 3px 2px;
   font-size: .96rem;
   line-height: 1.05;
-  white-space: nowrap;
+  white-space: normal;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
-/* Ayarlar sayfasinda accordion animasyonunu kapat:
-   ara frame reflow'u nedeniyle olusan kisa sureli satir kaymasini engeller. */
 .card .accordion{
   display: none;
   max-height: none;
@@ -69,6 +77,7 @@ body{
 
 .arrow{
   transition: none;
+  margin-left: auto;
 }
 
 
