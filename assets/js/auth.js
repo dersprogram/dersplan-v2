@@ -10,11 +10,12 @@ import {
   setPersistence,
   signInWithEmailAndPassword,
   signInWithPopup,
-  signInWithRedirect,
   signOut,
   updatePassword,
   onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+// ✅ signInWithRedirect import'u kaldırıldı — artık her ortamda popup kullanılıyor.
 
 (function(){
   const STORAGE_KEY = "ayarlar";
@@ -88,17 +89,6 @@ import {
     return ensureAppData(safeJsonParse(localStorage.getItem(STORAGE_KEY), null));
   }
 
-  function markRedirectPending(provider){
-    sessionStorage.setItem(REDIRECT_PENDING_KEY, JSON.stringify({
-      provider: String(provider || "google"),
-      startedAt: Date.now()
-    }));
-  }
-
-  function hasRedirectPending(){
-    return !!sessionStorage.getItem(REDIRECT_PENDING_KEY);
-  }
-
   function clearRedirectPending(){
     sessionStorage.removeItem(REDIRECT_PENDING_KEY);
   }
@@ -142,7 +132,8 @@ import {
       return "Bir hata oluştu";
     }
     if(code === "auth/popup-blocked"){
-      return "Bir hata oluştu";
+      // ✅ Kullanıcıya daha açıklayıcı mesaj
+      return "Popup engellendi. Lütfen tarayıcınızın popup engelleyicisini bu site için kapatın.";
     }
     if(code === "auth/cancelled-popup-request"){
       return "Bir hata oluştu";
@@ -247,114 +238,37 @@ import {
     return authPersistencePromise;
   }
 
-  function waitForRedirectAuthUser(timeoutMs){
-    const waitMs = Number(timeoutMs) > 0 ? Number(timeoutMs) : 3000;
-    return new Promise(function(resolve){
-      let settled = false;
-      let unsubscribe = function(){};
-
-      const timer = window.setTimeout(function(){
-        if(settled) return;
-        settled = true;
-        unsubscribe();
-        resolve(auth.currentUser || null);
-      }, waitMs);
-
-      unsubscribe = onAuthStateChanged(auth, function(firebaseUser){
-        if(!firebaseUser || settled) return;
-        settled = true;
-        window.clearTimeout(timer);
-        unsubscribe();
-        resolve(firebaseUser);
-      }, function(){
-        if(settled) return;
-        settled = true;
-        window.clearTimeout(timer);
-        unsubscribe();
-        resolve(auth.currentUser || null);
-      });
-    });
-  }
-
-  async function handleRedirectSignInResult(){
-    try{
-      await ensureAuthConfigured();
-      const redirectWasPending = hasRedirectPending();
-      const result = await getRedirectResult(auth);
-
-      if(result && result.user){
-        clearRedirectPending();
-        currentFirebaseUser = result.user;
-        const appData = loadAppData();
-        return applyAuthenticatedUser(appData, result.user, {
-          name: result.user.displayName || appData.settings.name,
-          email: result.user.email || appData.settings.email,
-          provider: "google",
-          persist: true
-        });
-      }
-
-      if(!redirectWasPending){
-        return null;
-      }
-
-      // Redirect dönüşünden hemen sonra auth.currentUser bazen gecikmeli gelir.
-      // Bu yüzden kısa süreli bekleyip kullanıcı set olunca uygulayalım.
-      const redirectedUser = auth.currentUser || await waitForRedirectAuthUser(4000);
-      if(!redirectedUser){
-        clearRedirectPending();
-        return null;
-      }
-
-      clearRedirectPending();
-      currentFirebaseUser = redirectedUser;
-      const appData = loadAppData();
-      return applyAuthenticatedUser(appData, redirectedUser, {
-        name: redirectedUser.displayName || appData.settings.name,
-        email: redirectedUser.email || appData.settings.email,
-        provider: "google",
-        persist: true
-      });
-    }catch(error){
-      clearRedirectPending();
-      error.userMessage = getFirebaseErrorMessage(error);
-      throw error;
-    }
-  }
+  // ✅ Redirect akışı tamamen kaldırıldı. Artık sadece popup kullanılıyor.
+  // handleRedirectSignInResult() yerine doğrudan onAuthStateChanged dinleniyor.
 
   function ensureAuthReady(){
     if(authReadyPromise) return authReadyPromise;
 
     authReadyPromise = ensureAuthConfigured()
       .then(function(){
-        return handleRedirectSignInResult();
-      })
-      .then(function(redirectAppData){
+        // Sayfada kalan eski redirect pending flag'ini temizle
+        clearRedirectPending();
+
         return new Promise(function(resolve, reject){
           if(authStateBound){
-            resolve(redirectAppData || syncFromStorage());
+            resolve(syncFromStorage());
             return;
           }
 
           authStateBound = true;
           onAuthStateChanged(auth, function(firebaseUser){
-            const hasPendingAuthenticatedUser = !!currentFirebaseUser;
-            currentFirebaseUser = firebaseUser || currentFirebaseUser || null;
+            currentFirebaseUser = firebaseUser || null;
             let appData = loadAppData();
 
             if(firebaseUser){
-              clearRedirectPending();
               appData = applyAuthenticatedUser(appData, firebaseUser, {
                 name: firebaseUser.displayName || appData.settings.name,
                 email: firebaseUser.email || appData.settings.email,
                 provider: resolveAuthProvider(firebaseUser, appData.settings.authProvider || "firebase"),
                 persist: true
               });
-            }else if(hasPendingAuthenticatedUser){
-              appData = redirectAppData || syncFromStorage();
-              AppAuth.user = createAppUserRecord(appData, currentFirebaseUser);
             }else{
-              appData = redirectAppData || syncFromStorage();
+              appData = syncFromStorage();
             }
 
             resolve(appData);
@@ -364,7 +278,7 @@ import {
               reject(error);
               return;
             }
-            resolve(redirectAppData || syncFromStorage());
+            resolve(syncFromStorage());
           });
         });
       });
@@ -459,23 +373,10 @@ import {
       throw error;
     }
   }
-/*
-  async function loginWithGoogle(){
-    if(hasPlaceholderConfig()){
-      throw new Error("Firebase ayarları eksik. assets/js/firebase.js içini doldurun.");
-    }
 
-    try{
-      const result = await signInWithPopup(auth, googleProvider);
-      clearRedirectPending();
-      currentFirebaseUser = result.user;
-      return result.user;
-    }catch(error){
-      clearRedirectPending();
-      error.userMessage = getFirebaseErrorMessage(error);
-      throw error;
-    }
-  } */
+  // ✅ DÜZELTME: Her ortamda (localhost, GitHub Pages, mobil) popup kullanılıyor.
+  // Redirect akışı kaldırıldı — cross-origin sorunlarına neden oluyordu.
+  // app-shell.js'deki window.open guard'ı popup öncesi askıya alınıyor.
   async function loginWithGoogle(){
     if(googleLoginPromise){
       return googleLoginPromise;
@@ -488,29 +389,43 @@ import {
     googleLoginPromise = (async function(){
       try{
         await ensureAuthConfigured();
-        const host = String(window.location.hostname || "").toLowerCase();
-        const isLocal = host === "localhost" || host === "127.0.0.1";
 
-        // Localhost'ta redirect akışı üçüncü taraf storage/cookie nedeniyle
-        // oturumu kaybedebiliyor. Burada popup daha stabil çalışır.
-        if(isLocal){
-          const result = await signInWithPopup(auth, googleProvider);
-          clearRedirectPending();
-          currentFirebaseUser = result.user;
-          const appData = loadAppData();
-          applyAuthenticatedUser(appData, result.user, {
-            name: result.user.displayName || appData.settings.name,
-            email: result.user.email || appData.settings.email,
-            provider: "google",
-            persist: true
-          });
-          return result.user;
+        // ✅ app-shell.js'deki window.open override'ını geçici olarak kaldır.
+        // Google popup'ı window.open ile açılıyor; guard engelliyordu.
+        if(window.AppShell && typeof window.AppShell.suspendExternalNavigationGuard === "function"){
+          window.AppShell.suspendExternalNavigationGuard();
+        }else{
+          window.__shellExternalGuardSuspended = true;
         }
 
-        markRedirectPending("google");
-        await signInWithRedirect(auth, googleProvider);
-        return null;
+        const result = await signInWithPopup(auth, googleProvider);
+
+        // Guard'ı geri aç
+        if(window.AppShell && typeof window.AppShell.resumeExternalNavigationGuard === "function"){
+          window.AppShell.resumeExternalNavigationGuard();
+        }else{
+          window.__shellExternalGuardSuspended = false;
+        }
+
+        clearRedirectPending();
+        currentFirebaseUser = result.user;
+        const appData = loadAppData();
+        applyAuthenticatedUser(appData, result.user, {
+          name: result.user.displayName || appData.settings.name,
+          email: result.user.email || appData.settings.email,
+          provider: "google",
+          persist: true
+        });
+        return result.user;
+
       }catch(error){
+        // Hata durumunda da guard'ı geri aç
+        if(window.AppShell && typeof window.AppShell.resumeExternalNavigationGuard === "function"){
+          window.AppShell.resumeExternalNavigationGuard();
+        }else{
+          window.__shellExternalGuardSuspended = false;
+        }
+
         clearRedirectPending();
         error.userMessage = getFirebaseErrorMessage(error);
         throw error;
