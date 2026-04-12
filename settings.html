@@ -624,8 +624,14 @@ async function confirmDeleteAccount(){
   const confirmDelete = confirm("Hesabınızı silmek istediğinize emin misiniz? Bu işlem geri alınamaz.");
   if(!confirmDelete) return;
 
-  const password = prompt("Devam etmek için mevcut şifrenizi girin:");
-  if(!password) return;
+  // Google kullanıcıları için şifre sorma — popup ile doğrulama yapılır.
+  const isGoogleUser = appData.settings.authProvider === "google";
+  let password = null;
+
+  if(!isGoogleUser){
+    password = prompt("Devam etmek için mevcut şifrenizi girin:");
+    if(!password) return;
+  }
 
   try{
     await AppAuth.restoreAuthSession();
@@ -1081,7 +1087,18 @@ async function submitRegister(){
     renderUserCard();
     renderSettingsUI();
   }catch(error){
-    showRegisterError(error?.userMessage || error?.message || "Kayıt sırasında hata oluştu.");
+    const msg = error?.userMessage || error?.message || "Kayıt sırasında hata oluştu.";
+    showRegisterError(msg);
+
+    // Google ile giriş önerisi varsa butonu vurgula
+    if(error?.suggestedProvider === "google"){
+      const googleBtn = document.querySelector("#guestContent button[onclick='loginWithGoogle()']");
+      if(googleBtn){
+        setRegisterFormVisible(false);
+        googleBtn.style.outline = "2px solid #ea4335";
+        setTimeout(() => { googleBtn.style.outline = ""; }, 3000);
+      }
+    }
   }
 }
 
@@ -1114,7 +1131,17 @@ async function submitLogin(){
     renderUserCard();
     renderSettingsUI();
   }catch(error){
-    showLoginError(error?.userMessage || error?.message || "Giriş sırasında hata oluştu.");
+    const msg = error?.userMessage || error?.message || "Giriş sırasında hata oluştu.";
+    showLoginError(msg);
+
+    // Google ile giriş önerisi varsa butonu vurgula
+    if(error?.suggestedProvider === "google"){
+      const googleBtn = document.querySelector("#guestContent button[onclick='loginWithGoogle()']");
+      if(googleBtn){
+        googleBtn.style.outline = "2px solid #ea4335";
+        setTimeout(() => { googleBtn.style.outline = ""; }, 3000);
+      }
+    }
   }
 }
 
@@ -1421,4 +1448,18 @@ window.addEventListener("load", () => {
 </script>
 </body>
 </html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
