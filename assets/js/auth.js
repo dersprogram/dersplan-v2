@@ -5,8 +5,10 @@ import {
   browserLocalPersistence,
   createUserWithEmailAndPassword,
   deleteUser,
-  getRedirectResult,
+  fetchSignInMethodsForEmail,
+  linkWithPopup,
   reauthenticateWithCredential,
+  reauthenticateWithPopup,
   setPersistence,
   signInWithEmailAndPassword,
   signInWithPopup,
@@ -15,11 +17,8 @@ import {
   onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
-// ✅ signInWithRedirect import'u kaldırıldı — artık her ortamda popup kullanılıyor.
-
 (function(){
   const STORAGE_KEY = "ayarlar";
-  const REDIRECT_PENDING_KEY = "appAuthRedirectPending";
   const DEFAULT_APP_DATA = {
     settings: {
       start: "08:15",
@@ -58,15 +57,15 @@ import {
   let authStateBound = false;
   let currentFirebaseUser = null;
   const googleProvider = new GoogleAuthProvider();
-  const AppAuth = {
-    user: null
-  };
+  const AppAuth = { user: null };
+
+  // ─── Yardımcı fonksiyonlar ───────────────────────────────────────────────
 
   function safeJsonParse(value, fallback){
     try{
       const parsed = JSON.parse(value);
       return parsed === null ? fallback : parsed;
-    }catch(error){
+    }catch(e){
       return fallback;
     }
   }
@@ -79,18 +78,14 @@ import {
     const next = Object.assign(cloneDefaultAppData(), appData || {});
     next.settings = Object.assign({}, DEFAULT_APP_DATA.settings, next.settings || {});
     next.activeDays = Array.isArray(next.activeDays) ? next.activeDays : DEFAULT_APP_DATA.activeDays.slice();
-    next.classes = Array.isArray(next.classes) ? next.classes : [];
-    next.lessons = Array.isArray(next.lessons) ? next.lessons : [];
+    next.classes  = Array.isArray(next.classes)  ? next.classes  : [];
+    next.lessons  = Array.isArray(next.lessons)  ? next.lessons  : [];
     next.schedule = next.schedule && typeof next.schedule === "object" ? next.schedule : {};
     return next;
   }
 
   function loadAppData(){
     return ensureAppData(safeJsonParse(localStorage.getItem(STORAGE_KEY), null));
-  }
-
-  function clearRedirectPending(){
-    sessionStorage.removeItem(REDIRECT_PENDING_KEY);
   }
 
   function saveAppData(appData){
@@ -101,113 +96,103 @@ import {
 
   function hasPlaceholderConfig(){
     const config = auth?.app?.options || {};
-    return Object.values(config).some(function(value){
-      return PLACEHOLDER_VALUES.includes(String(value || "").trim());
+    return Object.values(config).some(function(v){
+      return PLACEHOLDER_VALUES.includes(String(v || "").trim());
     });
   }
 
-  function getFirebaseErrorMessage(error){
-    const code = String(error?.code || "");
-    const fallback = "Bir hata oluştu";
-
-    if(code === "auth/wrong-password" || code === "auth/invalid-credential"){
-      return "Şifre yanlış";
-    }
-    if(code === "auth/user-not-found"){
-      return "Bu e-posta ile kayıtlı kullanıcı yok.";
-    }
-    if(code === "auth/email-already-in-use"){
-      return "Bu e-posta zaten kayıtlı.";
-    }
-    if(code === "auth/invalid-email"){
-      return "Geçerli bir e-posta girin.";
-    }
-    if(code === "auth/weak-password"){
-      return "Şifre en az 6 karakter olmalı";
-    }
-    if(code === "auth/network-request-failed"){
-      return "Google oturumu başlatılamadı. İnternet/VPN engeli veya Firebase Authorized Domains ayarını kontrol edin.";
-    }
-    if(code === "auth/popup-closed-by-user"){
-      return "Bir hata oluştu";
-    }
-    if(code === "auth/popup-blocked"){
-      // ✅ Kullanıcıya daha açıklayıcı mesaj
-      return "Popup engellendi. Lütfen tarayıcınızın popup engelleyicisini bu site için kapatın.";
-    }
-    if(code === "auth/cancelled-popup-request"){
-      return "Bir hata oluştu";
-    }
-
-    return fallback;
-  }
-
-  function createAppUserRecord(appData, firebaseUser){
-    if(!firebaseUser) return null;
-
-    const next = ensureAppData(appData);
-    return {
-      uid: firebaseUser.uid || next.settings.firebaseUid || "",
-      email: firebaseUser.email || next.settings.email || "",
-      name: next.settings.name || (firebaseUser.email || "").split("@")[0] || "Kullanıcı"
-    };
-  }
-
-  function resolveAuthProvider(firebaseUser, fallbackProvider){
-    const providerId = firebaseUser?.providerData?.[0]?.providerId || "";
-    if(providerId === "google.com") return "google";
-    if(providerId === "password") return "firebase";
-    return String(fallbackProvider || "").trim() || "firebase";
+  function resolveAuthProvider(firebaseUser, fallback){
+    const pid = firebaseUser?.providerData?.[0]?.providerId || "";
+    if(pid === "google.com") return "google";
+    if(pid === "password")   return "firebase";
+    return String(fallback || "").trim() || "firebase";
   }
 
   function isGuest(appData){
     return ensureAppData(appData).settings.userType === "guest";
   }
 
-  function applyAuthenticatedUser(appData, firebaseUser, extras){
+  // ─── Hata mesajları ──────────────────────────────────────────────────────
+
+  function getFirebaseErrorMessage(error){
+    const code = String(error?.code || "");
+
+    // Provider çakışması — özel nesne taşıyoruz
+    if(error?.type === "provider-mismatch"){
+      return error.userMessage || "Bu hesap farklı bir yöntemle oluşturuldu.";
+    }
+
+    const messages = {
+      "auth/wrong-password"            : "Şifre yanlış.",
+      "auth/invalid-credential"        : "Şifre yanlış veya hesap farklı bir yöntemle oluşturuldu.",
+      "auth/user-not-found"            : "Bu e-posta ile kayıtlı hesap yok.",
+      "auth/email-already-in-use"      : "Bu e-posta zaten kayıtlı.",
+      "auth/invalid-email"             : "Geçerli bir e-posta girin.",
+      "auth/weak-password"             : "Şifre en az 6 karakter olmalı.",
+      "auth/network-request-failed"    : "Bağlantı hatası. İnternet bağlantınızı kontrol edin.",
+      "auth/popup-closed-by-user"      : "Giriş penceresi kapatıldı.",
+      "auth/popup-blocked"             : "Popup engellendi. Lütfen tarayıcınızın popup engelleyicisini bu site için kapatın.",
+      "auth/cancelled-popup-request"   : "Giriş isteği iptal edildi.",
+      "auth/account-exists-with-different-credential": "Bu e-posta farklı bir giriş yöntemiyle kayıtlı.",
+      "auth/credential-already-in-use" : "Bu hesap zaten başka bir kullanıcıya bağlı.",
+      "auth/requires-recent-login"     : "Bu işlem için tekrar giriş yapmanız gerekiyor.",
+      "auth/too-many-requests"         : "Çok fazla deneme yapıldı. Lütfen biraz bekleyin."
+    };
+
+    return messages[code] || "Bir hata oluştu.";
+  }
+
+  // ─── Kullanıcı durumu uygulama ───────────────────────────────────────────
+
+  function createAppUserRecord(appData, firebaseUser){
+    if(!firebaseUser) return null;
     const next = ensureAppData(appData);
+    return {
+      uid:   firebaseUser.uid   || next.settings.firebaseUid || "",
+      email: firebaseUser.email || next.settings.email       || "",
+      name:  next.settings.name || (firebaseUser.email || "").split("@")[0] || "Kullanıcı"
+    };
+  }
+
+  function applyAuthenticatedUser(appData, firebaseUser, extras){
+    const next    = ensureAppData(appData);
     const options = extras || {};
     const incomingName = String(options.name || "").trim();
-    const resolvedName = incomingName || next.settings.name || (firebaseUser?.email || "").split("@")[0] || "Kullanıcı";
+    const resolvedName = incomingName || next.settings.name ||
+                         (firebaseUser?.email || "").split("@")[0] || "Kullanıcı";
 
-    next.settings.userType = "registered";
-    next.settings.name = resolvedName;
-    next.settings.email = firebaseUser?.email || String(options.email || "").trim() || next.settings.email || "";
-    next.settings.password = "";
-    next.settings.firebaseUid = firebaseUser?.uid || String(options.uid || "").trim() || next.settings.firebaseUid || "";
-    next.settings.authProvider = String(options.provider || "").trim() || resolveAuthProvider(firebaseUser, "firebase");
+    next.settings.userType     = "registered";
+    next.settings.name         = resolvedName;
+    next.settings.email        = firebaseUser?.email || String(options.email || "").trim() || next.settings.email || "";
+    next.settings.password     = "";
+    next.settings.firebaseUid  = firebaseUser?.uid   || String(options.uid   || "").trim() || next.settings.firebaseUid || "";
+    next.settings.authProvider = String(options.provider || "").trim() ||
+                                 resolveAuthProvider(firebaseUser, "firebase");
 
     currentFirebaseUser = firebaseUser || currentFirebaseUser;
     AppAuth.user = createAppUserRecord(next, firebaseUser || currentFirebaseUser);
 
-    if(options.persist !== false){
-      saveAppData(next);
-    }
-
+    if(options.persist !== false) saveAppData(next);
     return next;
   }
 
   function applyGuestUser(appData, options){
-    const next = ensureAppData(appData);
-    const settings = next.settings;
+    const next   = ensureAppData(appData);
     const config = Object.assign({ persist: true, clearIdentity: false }, options || {});
 
-    settings.userType = "guest";
-    settings.password = "";
-    settings.firebaseUid = "";
-    settings.authProvider = "";
+    next.settings.userType     = "guest";
+    next.settings.password     = "";
+    next.settings.firebaseUid  = "";
+    next.settings.authProvider = "";
     if(config.clearIdentity){
-      settings.name = "";
-      settings.email = "";
+      next.settings.name  = "";
+      next.settings.email = "";
     }
 
     currentFirebaseUser = null;
-    AppAuth.user = null;
+    AppAuth.user        = null;
 
-    if(config.persist !== false){
-      saveAppData(next);
-    }
-
+    if(config.persist !== false) saveAppData(next);
     return next;
   }
 
@@ -217,106 +202,264 @@ import {
       AppAuth.user = null;
       return appData;
     }
-
     AppAuth.user = {
-      uid: appData.settings.firebaseUid || "",
-      email: appData.settings.email || "",
-      name: appData.settings.name || (appData.settings.email || "").split("@")[0] || "Kullanıcı"
+      uid:   appData.settings.firebaseUid || "",
+      email: appData.settings.email       || "",
+      name:  appData.settings.name        || (appData.settings.email || "").split("@")[0] || "Kullanıcı"
     };
     return appData;
   }
 
+  // ─── Auth hazırlık ───────────────────────────────────────────────────────
+
   function ensureAuthConfigured(){
     if(authPersistencePromise) return authPersistencePromise;
-
     authPersistencePromise = setPersistence(auth, browserLocalPersistence)
       .catch(function(error){
         error.userMessage = getFirebaseErrorMessage(error);
         throw error;
       });
-
     return authPersistencePromise;
   }
-
-  // ✅ Redirect akışı tamamen kaldırıldı. Artık sadece popup kullanılıyor.
-  // handleRedirectSignInResult() yerine doğrudan onAuthStateChanged dinleniyor.
 
   function ensureAuthReady(){
     if(authReadyPromise) return authReadyPromise;
 
-    authReadyPromise = ensureAuthConfigured()
-      .then(function(){
-        // Sayfada kalan eski redirect pending flag'ini temizle
-        clearRedirectPending();
+    authReadyPromise = ensureAuthConfigured().then(function(){
+      return new Promise(function(resolve, reject){
+        if(authStateBound){
+          resolve(syncFromStorage());
+          return;
+        }
 
-        return new Promise(function(resolve, reject){
-          if(authStateBound){
-            resolve(syncFromStorage());
-            return;
+        authStateBound = true;
+        onAuthStateChanged(auth, function(firebaseUser){
+          currentFirebaseUser = firebaseUser || null;
+          let appData = loadAppData();
+
+          if(firebaseUser){
+            appData = applyAuthenticatedUser(appData, firebaseUser, {
+              name:     firebaseUser.displayName || appData.settings.name,
+              email:    firebaseUser.email       || appData.settings.email,
+              provider: resolveAuthProvider(firebaseUser, appData.settings.authProvider || "firebase"),
+              persist:  true
+            });
+          }else{
+            appData = syncFromStorage();
           }
 
-          authStateBound = true;
-          onAuthStateChanged(auth, function(firebaseUser){
-            currentFirebaseUser = firebaseUser || null;
-            let appData = loadAppData();
-
-            if(firebaseUser){
-              appData = applyAuthenticatedUser(appData, firebaseUser, {
-                name: firebaseUser.displayName || appData.settings.name,
-                email: firebaseUser.email || appData.settings.email,
-                provider: resolveAuthProvider(firebaseUser, appData.settings.authProvider || "firebase"),
-                persist: true
-              });
-            }else{
-              appData = syncFromStorage();
-            }
-
-            resolve(appData);
-          }, function(error){
-            if(error){
-              error.userMessage = getFirebaseErrorMessage(error);
-              reject(error);
-              return;
-            }
-            resolve(syncFromStorage());
-          });
+          resolve(appData);
+        }, function(error){
+          if(error){
+            error.userMessage = getFirebaseErrorMessage(error);
+            reject(error);
+            return;
+          }
+          resolve(syncFromStorage());
         });
       });
+    });
 
     return authReadyPromise;
   }
+
+  // ─── window.open guard yönetimi ──────────────────────────────────────────
+
+  function suspendGuard(){
+    if(window.AppShell && typeof window.AppShell.suspendExternalNavigationGuard === "function"){
+      window.AppShell.suspendExternalNavigationGuard();
+    }else{
+      window.__shellExternalGuardSuspended = true;
+    }
+  }
+
+  function resumeGuard(){
+    if(window.AppShell && typeof window.AppShell.resumeExternalNavigationGuard === "function"){
+      window.AppShell.resumeExternalNavigationGuard();
+    }else{
+      window.__shellExternalGuardSuspended = false;
+    }
+  }
+
+  // ─── Provider tespiti ────────────────────────────────────────────────────
+  // Verilen e-postaya hangi giriş yöntemlerinin kayıtlı olduğunu döndürür.
+  // Örnek: ["google.com"] / ["password"] / ["google.com","password"] / []
+
+  async function getProviderMethodsForEmail(email){
+    try{
+      return await fetchSignInMethodsForEmail(auth, email);
+    }catch(e){
+      return [];
+    }
+  }
+
+  // ─── E-posta / Şifre ile kayıt ───────────────────────────────────────────
 
   async function registerWithEmail(email, password){
     if(hasPlaceholderConfig()){
       throw new Error("Firebase ayarları eksik. assets/js/firebase.js içini doldurun.");
     }
-
     try{
       await ensureAuthConfigured();
+
+      // Aynı e-posta Google ile kayıtlıysa kullanıcıyı yönlendir
+      const methods = await getProviderMethodsForEmail(email);
+      if(methods.includes("google.com") && !methods.includes("password")){
+        const err = new Error(
+          "Bu e-posta Google hesabıyla kayıtlı. " +
+          "Google butonu ile giriş yapabilirsiniz."
+        );
+        err.code = "auth/account-exists-with-google";
+        err.userMessage = err.message;
+        err.type = "provider-mismatch";
+        err.suggestedProvider = "google";
+        throw err;
+      }
+
       const credential = await createUserWithEmailAndPassword(auth, email, password);
       currentFirebaseUser = credential.user;
       return credential.user;
     }catch(error){
-      error.userMessage = getFirebaseErrorMessage(error);
+      if(!error.userMessage) error.userMessage = getFirebaseErrorMessage(error);
       throw error;
     }
   }
+
+  // ─── E-posta / Şifre ile giriş ───────────────────────────────────────────
 
   async function loginWithEmail(email, password){
     if(hasPlaceholderConfig()){
       throw new Error("Firebase ayarları eksik. assets/js/firebase.js içini doldurun.");
     }
-
     try{
       await ensureAuthConfigured();
+
+      // Provider kontrolü — şifre girmeden önce yanlış yöntemi engelle
+      const methods = await getProviderMethodsForEmail(email);
+
+      if(methods.length > 0 && !methods.includes("password")){
+        const providerLabel = methods.includes("google.com") ? "Google" : methods[0];
+        const err = new Error(
+          "Bu hesap " + providerLabel + " ile oluşturuldu. " +
+          (providerLabel === "Google"
+            ? "Google butonu ile giriş yapın."
+            : "Doğru yöntemle giriş yapın.")
+        );
+        err.code = "auth/account-exists-with-different-credential";
+        err.userMessage = err.message;
+        err.type = "provider-mismatch";
+        err.suggestedProvider = methods.includes("google.com") ? "google" : null;
+        throw err;
+      }
+
       const credential = await signInWithEmailAndPassword(auth, email, password);
       currentFirebaseUser = credential.user;
       return credential.user;
     }catch(error){
-      error.userMessage = getFirebaseErrorMessage(error);
+      if(!error.userMessage) error.userMessage = getFirebaseErrorMessage(error);
       throw error;
     }
   }
+
+  // ─── Google ile giriş ────────────────────────────────────────────────────
+  // Her ortamda popup kullanılır (GitHub Pages, mobil, localhost).
+  // Hesap zaten şifre ile kayıtlıysa kullanıcıya bilgi verilir.
+
+  async function loginWithGoogle(){
+    if(googleLoginPromise) return googleLoginPromise;
+
+    if(hasPlaceholderConfig()){
+      throw new Error("Firebase ayarları eksik. assets/js/firebase.js içini doldurun.");
+    }
+
+    googleLoginPromise = (async function(){
+      try{
+        await ensureAuthConfigured();
+        suspendGuard();
+
+        let result;
+        try{
+          result = await signInWithPopup(auth, googleProvider);
+        }catch(popupError){
+          // Hesap şifre ile kayıtlı → kullanıcıya açıkla
+          if(popupError.code === "auth/account-exists-with-different-credential"){
+            const email = popupError.customData?.email || "";
+            const methods = email ? await getProviderMethodsForEmail(email) : [];
+
+            if(methods.includes("password")){
+              const mergeErr = new Error(
+                "Bu e-posta (" + email + ") şifre ile kayıtlı. " +
+                "Şifrenizle giriş yapın. Daha sonra hesap ayarlarından " +
+                "Google hesabını da ekleyebilirsiniz."
+              );
+              mergeErr.code = "auth/account-exists-with-different-credential";
+              mergeErr.userMessage = mergeErr.message;
+              mergeErr.type = "provider-mismatch";
+              mergeErr.suggestedProvider = "password";
+              mergeErr.email = email;
+              throw mergeErr;
+            }
+          }
+          throw popupError;
+        }
+
+        resumeGuard();
+        currentFirebaseUser = result.user;
+        const appData = loadAppData();
+        applyAuthenticatedUser(appData, result.user, {
+          name:     result.user.displayName || appData.settings.name,
+          email:    result.user.email       || appData.settings.email,
+          provider: "google",
+          persist:  true
+        });
+        return result.user;
+
+      }catch(error){
+        resumeGuard();
+        if(!error.userMessage) error.userMessage = getFirebaseErrorMessage(error);
+        throw error;
+      }finally{
+        googleLoginPromise = null;
+      }
+    })();
+
+    return googleLoginPromise;
+  }
+
+  // ─── Hesap birleştirme ───────────────────────────────────────────────────
+  // Şifre ile giriş yapmış kullanıcı, Google hesabını da bağlamak isterse çağrılır.
+  // Settings sayfasında "Google Hesabını Bağla" butonu eklenebilir.
+
+  async function linkGoogleToCurrentUser(){
+    try{
+      await ensureAuthConfigured();
+      const user = auth.currentUser || currentFirebaseUser;
+      if(!user){
+        const err = new Error("Önce giriş yapmanız gerekiyor.");
+        err.userMessage = err.message;
+        throw err;
+      }
+
+      suspendGuard();
+      const result = await linkWithPopup(user, googleProvider);
+      resumeGuard();
+
+      const appData = loadAppData();
+      applyAuthenticatedUser(appData, result.user, {
+        name:     result.user.displayName || appData.settings.name,
+        email:    result.user.email       || appData.settings.email,
+        provider: "google",
+        persist:  true
+      });
+      return result.user;
+    }catch(error){
+      resumeGuard();
+      if(!error.userMessage) error.userMessage = getFirebaseErrorMessage(error);
+      throw error;
+    }
+  }
+
+  // ─── Diğer işlemler ──────────────────────────────────────────────────────
 
   async function logoutCurrentUser(){
     try{
@@ -339,15 +482,35 @@ import {
     await ensureAuthConfigured();
     const user = auth.currentUser || currentFirebaseUser;
     if(!user || !user.email){
-      const error = new Error("Bir hata oluştu");
+      const error = new Error("Bir hata oluştu.");
       error.code = "auth/no-current-user";
-      error.userMessage = getFirebaseErrorMessage(error);
+      error.userMessage = error.message;
       throw error;
     }
-
     const credential = EmailAuthProvider.credential(user.email, currentPassword);
     await reauthenticateWithCredential(user, credential);
     return user;
+  }
+
+  // Google kullanıcısı için yeniden doğrulama (hesap silme vb. için)
+  async function reauthenticateGoogleUser(){
+    await ensureAuthConfigured();
+    const user = auth.currentUser || currentFirebaseUser;
+    if(!user){
+      const error = new Error("Bir hata oluştu.");
+      error.userMessage = error.message;
+      throw error;
+    }
+    suspendGuard();
+    try{
+      await reauthenticateWithPopup(user, googleProvider);
+      resumeGuard();
+      return user;
+    }catch(error){
+      resumeGuard();
+      error.userMessage = getFirebaseErrorMessage(error);
+      throw error;
+    }
   }
 
   async function changeCurrentUserPassword(currentPassword, newPassword){
@@ -356,86 +519,33 @@ import {
       await updatePassword(user, newPassword);
       return user;
     }catch(error){
-      error.userMessage = getFirebaseErrorMessage(error);
+      if(!error.userMessage) error.userMessage = getFirebaseErrorMessage(error);
       throw error;
     }
   }
 
   async function deleteCurrentUser(currentPassword){
     try{
-      const user = await reauthenticateEmailUser(currentPassword);
-      await deleteUser(user);
+      const provider = resolveAuthProvider(auth.currentUser || currentFirebaseUser, "");
+      if(provider === "google"){
+        // Google kullanıcısı — popup ile yeniden doğrula
+        const user = await reauthenticateGoogleUser();
+        await deleteUser(user);
+      }else{
+        // E-posta/şifre kullanıcısı
+        const user = await reauthenticateEmailUser(currentPassword);
+        await deleteUser(user);
+      }
       currentFirebaseUser = null;
       AppAuth.user = null;
       return null;
     }catch(error){
-      error.userMessage = getFirebaseErrorMessage(error);
+      if(!error.userMessage) error.userMessage = getFirebaseErrorMessage(error);
       throw error;
     }
   }
 
-  // ✅ DÜZELTME: Her ortamda (localhost, GitHub Pages, mobil) popup kullanılıyor.
-  // Redirect akışı kaldırıldı — cross-origin sorunlarına neden oluyordu.
-  // app-shell.js'deki window.open guard'ı popup öncesi askıya alınıyor.
-  async function loginWithGoogle(){
-    if(googleLoginPromise){
-      return googleLoginPromise;
-    }
-
-    if(hasPlaceholderConfig()){
-      throw new Error("Firebase ayarları eksik. assets/js/firebase.js içini doldurun.");
-    }
-
-    googleLoginPromise = (async function(){
-      try{
-        await ensureAuthConfigured();
-
-        // ✅ app-shell.js'deki window.open override'ını geçici olarak kaldır.
-        // Google popup'ı window.open ile açılıyor; guard engelliyordu.
-        if(window.AppShell && typeof window.AppShell.suspendExternalNavigationGuard === "function"){
-          window.AppShell.suspendExternalNavigationGuard();
-        }else{
-          window.__shellExternalGuardSuspended = true;
-        }
-
-        const result = await signInWithPopup(auth, googleProvider);
-
-        // Guard'ı geri aç
-        if(window.AppShell && typeof window.AppShell.resumeExternalNavigationGuard === "function"){
-          window.AppShell.resumeExternalNavigationGuard();
-        }else{
-          window.__shellExternalGuardSuspended = false;
-        }
-
-        clearRedirectPending();
-        currentFirebaseUser = result.user;
-        const appData = loadAppData();
-        applyAuthenticatedUser(appData, result.user, {
-          name: result.user.displayName || appData.settings.name,
-          email: result.user.email || appData.settings.email,
-          provider: "google",
-          persist: true
-        });
-        return result.user;
-
-      }catch(error){
-        // Hata durumunda da guard'ı geri aç
-        if(window.AppShell && typeof window.AppShell.resumeExternalNavigationGuard === "function"){
-          window.AppShell.resumeExternalNavigationGuard();
-        }else{
-          window.__shellExternalGuardSuspended = false;
-        }
-
-        clearRedirectPending();
-        error.userMessage = getFirebaseErrorMessage(error);
-        throw error;
-      }finally{
-        googleLoginPromise = null;
-      }
-    })();
-
-    return googleLoginPromise;
-  }
+  // ─── AppAuth nesnesi ─────────────────────────────────────────────────────
 
   Object.assign(AppAuth, {
     ready: ensureAuthReady(),
@@ -447,18 +557,18 @@ import {
     registerWithEmail,
     loginWithEmail,
     loginWithGoogle,
+    linkGoogleToCurrentUser,   // Yeni: şifre hesabına Google bağlama
     logoutCurrentUser,
     changeCurrentUserPassword,
     deleteCurrentUser,
-    getFirebaseErrorMessage
+    getFirebaseErrorMessage,
+    getProviderMethodsForEmail // Yeni: provider sorgulama
   });
 
-  window.AppAuth = AppAuth;
+  window.AppAuth         = AppAuth;
   window.loginWithGoogle = loginWithGoogle;
 
   window.addEventListener("storage", function(event){
-    if(event.key === STORAGE_KEY){
-      syncFromStorage();
-    }
+    if(event.key === STORAGE_KEY) syncFromStorage();
   });
 })();
