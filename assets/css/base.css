@@ -51,4 +51,19 @@ a{
 
 *{
   -webkit-tap-highlight-color: transparent;
+  /* Metin seçimi ve Google Lens / uzun basma menüsünü engelle */
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* Input ve textarea'da yazmak ve kopyalamak için seçime izin ver */
+input,
+textarea,
+[contenteditable]{
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
 }
