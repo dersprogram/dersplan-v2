@@ -189,6 +189,7 @@ if(window.location.hostname === "127.0.0.1"){
         </div>
         <div class="accordion">
           <div class="settings-grid">
+
             <div class="field"><div class="lbl">Ders Başlangıcı</div><input class="ctrl" id="startTime" type="time"/></div>
             <div class="field"><div class="lbl">Süre (dk)</div><input class="ctrl" id="lessonDur" type="number"/></div>
             <div class="field"><div class="lbl">Teneffüs (dk)</div><input class="ctrl" id="breakDur" type="number"/></div>
@@ -196,6 +197,8 @@ if(window.location.hostname === "127.0.0.1"){
             <div class="field"><div class="lbl">Öğle Arası (dk)</div><input class="ctrl" id="lunchDur" type="number"/></div>
             <div class="field">
               <div class="lbl">Görünüm</div>
+
+            
               <select class="ctrl" id="timeMode">
                 <option value="Giris-Cikis">Giris-Cikis</option>
                 <option value="Giris">Giris</option>
@@ -506,10 +509,12 @@ function closeUserPanels(){
 
 function togglePasswordPanel(){
   const passwordPanel = document.getElementById("passwordPanel");
+  const deletePanel = document.getElementById("deletePanel");
   if(!passwordPanel) return;
 
   const isOpen = passwordPanel.style.display === "block";
   closeUserPanels();
+  if(deletePanel) deletePanel.style.display = "none";
   if(!isOpen){
     passwordPanel.style.display = "block";
   }
@@ -682,6 +687,7 @@ function renderDays(){
 }
 
 function toggleDay(index){
+
   if(appData.activeDays.includes(index)){
     appData.activeDays = appData.activeDays.filter((day) => day !== index);
   }else{
@@ -937,6 +943,7 @@ function addRow(){
   }, 100);
 }
 
+
 function delRow(index){
   const day = getSelectedDay();
   if(!isEditableDay(day)){
@@ -1023,6 +1030,7 @@ function openLogin(){
   if(emailInput) emailInput.value = appData.settings.email || "";
   if(passwordInput) passwordInput.value = "";
   setLoginFormVisible(true);
+  return false;
 }
 
 function cancelRegister(){
@@ -1184,7 +1192,6 @@ document.querySelectorAll(".card input, .card select").forEach((element) => {
     renderSettingsUI();
   });
 });
-
 window.onload = async () => {
   const fontCtrl = document.getElementById("fontSizeCtrl");
   const studentWrap = document.getElementById("studentClassWrap");
@@ -1309,9 +1316,89 @@ window.onload = async () => {
     renderUserCard();
     renderSettingsUI();
   });
-};
 
-// Kart başlığına tıklanınca: toggle open/close + gerekirse yukarı kaydır
+};
+/*
+window.onload = () => {
+  hydrateControlsFromData();
+  renderDays();
+  renderSettingsUI();
+
+  const fontCtrl = document.getElementById("fontSizeCtrl");
+  const studentWrap = document.getElementById("studentClassWrap");
+  const studentInput = document.getElementById("studentClassInput");
+  const guestStudentWrap = document.getElementById("guestStudentClassWrap");
+  const guestStudentInput = document.getElementById("guestStudentClassInput");
+  const classCard = document.getElementById("classCard");
+  const daySelect = document.getElementById("daySelect");
+  const roleButtons = document.querySelectorAll(".role-chips .chip");
+
+  function updateRoleUI(){
+    const isStudent = appData.settings.role === "student";
+    studentWrap.style.display = isStudent && !isGuest() ? "block" : "none";
+    guestStudentWrap.style.display = isStudent && isGuest() ? "block" : "none";
+    classCard.style.display = isStudent ? "none" : "block";
+    renderScheduleHeader();
+  }
+
+  function updateRoleButtons(){
+    roleButtons.forEach((button) => {
+      button.classList.toggle("active", button.dataset.role === appData.settings.role);
+    });
+  }
+
+  roleButtons.forEach((button) => {
+    button.onclick = () => {
+      appData.settings.role = button.dataset.role;
+      saveAppData();
+      updateRoleUI();
+      updateRoleButtons();
+      renderSettingsUI();
+    };
+  });
+
+  studentInput.value = appData.settings.studentClass || "";
+  studentInput.addEventListener("input", function(){
+    appData.settings.studentClass = this.value.trim();
+    if(guestStudentInput) guestStudentInput.value = this.value.trim();
+    saveAppData();
+  });
+
+  guestStudentInput.value = appData.settings.studentClass || "";
+  guestStudentInput.addEventListener("input", function(){
+    appData.settings.studentClass = this.value.trim();
+    studentInput.value = this.value.trim();
+    saveAppData();
+  });
+
+  fontCtrl.value = AppShell.getStoredFontSize();
+  fontCtrl.addEventListener("change", function(){
+    AppShell.applyFontSize(this.value, true);
+  });
+
+  daySelect.addEventListener("change", renderSettingsUI);
+  function applyPageState(){
+    hydrateControlsFromData();
+    updateRoleUI();
+    updateRoleButtons();
+    syncUserProfile();
+    renderDays();
+    renderUserCard();
+    renderSettingsUI();
+  }
+
+  applyPageState();
+  document.body.classList.remove("pageBooting");
+
+  AppAuth.restoreAuthSession()
+    .then((restoredAppData) => {
+      if(!restoredAppData) return;
+      syncAppData(restoredAppData);
+      applyPageState();
+    })
+    .catch(() => {});
+};
+*/
 document.querySelectorAll(".card-head").forEach((head) => {
   head.addEventListener("click", function(){
     const card = this.parentElement;
@@ -1325,9 +1412,17 @@ document.querySelectorAll(".card-head").forEach((head) => {
 
     card.classList.toggle("open");
     card.querySelector(".arrow")?.classList.toggle("open");
+  });
+});
+// kart açılınca otomatik yukarı kaydır
+document.querySelectorAll(".card-head").forEach(head => {
+  head.addEventListener("click", () => {
+    const card = head.parentElement;
 
     setTimeout(() => {
       const rect = card.getBoundingClientRect();
+
+      // eğer kart ekranın altına taşıyorsa yukarı kaydır
       if(rect.bottom > window.innerHeight - 80){
         window.scrollBy({
           top: rect.bottom - window.innerHeight + 120,
@@ -1337,10 +1432,24 @@ document.querySelectorAll(".card-head").forEach((head) => {
     }, 200);
   });
 });
-
 window.addEventListener("load", () => {
   document.body.classList.add("loaded");
 });
 </script>
 </body>
 </html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
