@@ -243,9 +243,36 @@ import {
         err.suggestedProvider = methods.includes("google.com") ? "google" : null;
         throw err;
       }
-      const credential = await signInWithEmailAndPassword(auth, email, password);
-      currentFirebaseUser = credential.user;
-      return credential.user;
+      try{
+        const credential = await signInWithEmailAndPassword(auth, email, password);
+        currentFirebaseUser = credential.user;
+        return credential.user;
+      }catch(firebaseError){
+        // auth/invalid-credential: şifre yanlış VEYA hesap Google ile açılmış olabilir.
+        // fetchSignInMethodsForEmail devre dışıysa provider önceden tespit edilemiyor.
+        // Hata sonrası tekrar provider sorgula.
+        if(
+          firebaseError.code === "auth/invalid-credential" ||
+          firebaseError.code === "auth/wrong-password"
+        ){
+          const retryMethods = await getProviderMethodsForEmail(email);
+          if(retryMethods.length > 0 && !retryMethods.includes("password")){
+            const label = retryMethods.includes("google.com") ? "Google" : retryMethods[0];
+            const err = new Error(
+              "Bu hesap " + label + " ile oluşturuldu. " +
+              (label === "Google" ? "Google butonu ile giriş yapın." : "Doğru yöntemle giriş yapın.")
+            );
+            err.code = "auth/account-exists-with-different-credential";
+            err.userMessage = err.message;
+            err.type = "provider-mismatch";
+            err.suggestedProvider = retryMethods.includes("google.com") ? "google" : null;
+            throw err;
+          }
+          firebaseError.userMessage = "Şifre yanlış.";
+        }
+        if(!firebaseError.userMessage) firebaseError.userMessage = getFirebaseErrorMessage(firebaseError);
+        throw firebaseError;
+      }
     }catch(error){
       if(!error.userMessage) error.userMessage = getFirebaseErrorMessage(error);
       throw error;
