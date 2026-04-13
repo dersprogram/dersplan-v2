@@ -752,11 +752,6 @@ document.onclick = () => {
 };
 
 function addItem(type, inputId){
-  if(isGuest() && type !== "classes"){
-    showGuestPrompt("Bu alanı tam kullanmak için kayıt olun.");
-    return;
-  }
-
   const value = document.getElementById(inputId).value.trim();
   if(!value) return;
 
@@ -772,11 +767,6 @@ function addItem(type, inputId){
 }
 
 function removeItem(type, index){
-  if(isGuest() && type !== "classes"){
-    showGuestPrompt("Bu alanı tam kullanmak için kayıt olun.");
-    return;
-  }
-
   appData[type].splice(index, 1);
   saveAppData();
   renderSettingsUI();
