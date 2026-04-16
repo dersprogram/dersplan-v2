@@ -28,29 +28,24 @@
 /* SADECE swipe kartları */
 .planSwipe .spCard {
   flex-shrink: 0 !important;
-  
-  max-width: 340px; !important;
+  max-width: 340px !important;
   height: 100% !important;
-
   scroll-snap-align: center;
-
   border-radius: 14px !important;
-  
-
   background: var(--card-bg, #1e293b) !important;
   border: 1px solid rgba(255,255,255,0.1) !important;
   box-shadow: 0 4px 16px rgba(0,0,0,0.3) !important;
-
   display: flex !important;
   flex-direction: column !important;
-
   padding: 0 !important;
   margin: 0 !important;
   width: 94%;
   overflow: hidden;
   transform: scale(0.95);
   transition: 0.25s;
+  scroll-snap-stop: always; /* 👈 Bu satırı ekleyin: Her kartta durmayı zorunlu kılar */
 }
+
 .planSwipe .spCard:active {
   transform: scale(1);
 }
@@ -102,14 +97,15 @@
   margin-top: 2px;
 
   display: -webkit-box !important;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
+-webkit-line-clamp: 2; /* Safari ve eski tarayıcılar için */
+line-clamp: 2;         /* Modern standart yazım */
+-webkit-box-orient: vertical;
 
   overflow: hidden !important;
   color: var(--text-primary, #fff) !important;
 }
 
-/* title */
+/*
 .planTitle {
   font-size: 11px;
   letter-spacing: 1px;
@@ -130,9 +126,36 @@
   height: 6px;
   background: #ff8a1f;
   border-radius: 2px;
+}*/
+.plan-title-outside {
+    /* Mevcut card-head stillerini korumak için benzer değerler */
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary, #fff);
+    
+    /* Hizalama Ayarları */
+    margin-left: 50px !important; /* Kartın scale(0.95) sonrası sol kenar hizası */
+    margin-bottom: 8px;
+    padding: 0 !important;
+    background: none !important;
+    border: none !important;
+    
+    display: flex;
+    align-items: center;
+}
+
+/* İstersen önüne o turuncu noktayı tekrar ekleyebiliriz */
+.plan-title-outside::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    background: #ff8a1f;
+    border-radius: 2px;
+    margin-right: 8px;
+    display: inline-block;
 }
 .planCard .planSwipe {
-  padding-left: 12px;
+  padding-left: 0px;
   padding-right: 12px;
   flex: 1;
   overflow-x: auto !important;
@@ -152,4 +175,32 @@
   height: 38vh;
   max-height: 420px;
   max-height: none;
+}
+
+/* swipe.css dosyasının en altına ekleyin */
+.plan-title-outside {
+    /* Yazıyı kartın sol ucuyla hizalayan kritik değer */
+    margin-left: 22px !important; 
+    
+    /* Diğer stil düzenlemeleri */
+    display: flex !important;
+    align-items: center !important;
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    margin-bottom: 8px !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    color: #fff !important;
+}
+
+/* Önündeki turuncu nokta için */
+.plan-title-outside::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    background: #ff8a1f;
+    border-radius: 2px;
+    margin-right: 8px;
+    display: inline-block;
 }
