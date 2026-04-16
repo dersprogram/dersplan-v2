@@ -14,6 +14,7 @@
 <link rel="stylesheet" href="assets/css/base.css?v=20260409-2">
 <link rel="stylesheet" href="assets/css/components.css?v=20260409-2">
 <link rel="stylesheet" href="assets/css/pages/notes.css?v=20260409-2">
+<link rel="stylesheet" href="assets/css/pages/swipe.css">
 </head>
 <body>
 <div class="appFrame">
@@ -21,10 +22,15 @@
     <div class="appInner">
       <div id="lessonScreen">
         <div class="title" id="lessonTitle">Ders</div>
-        <div class="planTitle">Yıllık Plan</div>
-        <div class="planSwipe">
-          
-  <div class="swipeWrap" id="planWrap"></div>
+        <div class="card-head">
+    Yıllık Plan
+  </div>
+          <div class="card planCard">
+  
+
+  <div class="planSwipe">
+    <div class="swipeWrap" id="planWrap"></div>
+  </div>
 </div>
         <div class="card" data-type="not">
           <div class="card-head">
@@ -116,7 +122,6 @@
 </div>
 
 <script>
-  
 function getAppData(){
   return AppShell.loadAppData() || {};
 }
@@ -166,15 +171,6 @@ function setLessonTitle(lesson){
     title.innerText = parts.length > 1 ? parts[0] + " - " + parts[1] : parts[0];
   }
 }
-let planDataGlobal = {};
-
-fetch("assets/data/aihl_kelam.json")
-  .then(res => res.json())
-  .then(data => {
-    planDataGlobal = data;
-    renderSwipe(planDataGlobal);
-  })
-  .catch(err => console.error("JSON HATA:", err));
 
 let editId = null;
 let editFromList = false;
@@ -224,7 +220,6 @@ function applyAccessState(){
 
 const params = new URLSearchParams(location.search);
 const lesson = params.get("lesson");
-console.log("LESSON:", lesson);
 const mode = params.get("mode") || (!lesson ? "list" : null);
 const requestedDay = getRequestedDay();
 accessLocked = isRestrictedAccess(requestedDay);
@@ -291,7 +286,6 @@ function save(type){
 
   saveData(dataset);
   render();
-  renderSwipe(planDataGlobal);
   renderAll();
   editFromList = false;
   editId = null;
@@ -316,6 +310,37 @@ function save(type){
   });
   document.querySelectorAll("#dayScreen button").forEach((button) => {
     button.textContent = "Kaydet";
+  });
+}
+let planDataGlobal = {};
+
+fetch("assets/data/aihl_kelam.json")
+  .then(res => res.json())
+  .then(d => { planDataGlobal = d; renderSwipe(d); })
+  .catch(err => console.error("JSON HATA:", err));
+
+function renderSwipe(data) {
+  const wrap = document.getElementById("planWrap");
+  if(!wrap) return;
+  wrap.innerHTML = "";
+
+  data.forEach(item => {
+    const card = `
+      <div class="spCard">
+        <div class="spHeader">${item.hafta}</div>
+        <div class="spBody">
+          <span class="spLabel">Ünite</span>
+          <span class="spValue">${item.unite || "-"}</span>
+          <span class="spLabel">Konu</span>
+          <span class="spValue">${item.konu || "-"}</span>
+          <span class="spLabel">Kazanım</span>
+          <span class="spValue">${item.kazanim || "-"}</span>
+          <span class="spLabel">Açıklama</span>
+          <span class="spValue">${item.aciklama || "-"}</span>
+        </div>
+      </div>
+    `;
+    wrap.innerHTML += card;
   });
 }
 
@@ -356,40 +381,6 @@ function render(){
 
         list.appendChild(div);
       });
-  });
-}
-function renderSwipe(data) {
-  const wrap = document.getElementById("planWrap");
-  wrap.innerHTML = "";
-
-  data.forEach(item => {
-    const card = `
-      <div class="swipeCard">
-        
-        <div class="cardHeader">
-          ${item.hafta}
-        </div>
-
-        <div class="cardBody">
-          
-          <div class="label">Ünite</div>
-          <div class="value">${item.unite}</div>
-
-          <div class="label">Konu</div>
-          <div class="value">${item.konu || "-"}</div>
-
-          <div class="label">Kazanım</div>
-          <div class="value">${item.kazanim}</div>
-
-          <div class="label">Açıklama</div>
-          <div class="value">${item.aciklama}</div>
-
-        </div>
-
-      </div>
-    `;
-
-    wrap.innerHTML += card;
   });
 }
 
@@ -591,10 +582,8 @@ function del(element, id){
 }
 
 render();
-
 if(mode === "list"){
   renderAll();
-
 }
 
 applyAccessState();
@@ -624,7 +613,6 @@ document.addEventListener("click", function(event){
   card.classList.toggle("open");
   arrow?.classList.toggle("open");
 });
-
 </script>
 </body>
 </html>

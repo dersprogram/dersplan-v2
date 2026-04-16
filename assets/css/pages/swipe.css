@@ -1,0 +1,155 @@
+/* SADECE swipe alanı */
+.planSwipe {
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+ min-height: 0; /* flex bug fix */
+  padding: 0 !important;
+  margin-bottom: 0 !important;
+
+  background: transparent !important;
+  border: none !important;
+  
+  scroll-padding-left: 0px;
+}
+
+/* wrapper */
+.planSwipe .swipeWrap {
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  gap: 0px; 
+  padding: 0;
+  height: 100%; 
+  padding-left: 6px;
+  padding-right: 6px;
+}
+
+/* SADECE swipe kartları */
+.planSwipe .spCard {
+  flex-shrink: 0 !important;
+  
+  max-width: 340px; !important;
+  height: 100% !important;
+
+  scroll-snap-align: center;
+
+  border-radius: 14px !important;
+  
+
+  background: var(--card-bg, #1e293b) !important;
+  border: 1px solid rgba(255,255,255,0.1) !important;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.3) !important;
+
+  display: flex !important;
+  flex-direction: column !important;
+
+  padding: 0 !important;
+  margin: 0 !important;
+  width: 94%;
+  overflow: hidden;
+  transform: scale(0.95);
+  transition: 0.25s;
+}
+.planSwipe .spCard:active {
+  transform: scale(1);
+}
+/* header */
+.planSwipe .spHeader {
+  background: linear-gradient(135deg, #ff7a00, #ff9a2a) !important;
+  color: white !important;
+  padding: 10px 12px !important;
+  font-weight: 600;
+  font-size: 13px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+/* body */
+.planSwipe .spBody {
+  padding: 12px 14px !important;
+  overflow-y: auto !important;
+  flex: 1;
+  line-height: 1.4;
+  
+}
+
+/* scrollbar */
+.planSwipe .spBody::-webkit-scrollbar {
+  width: 3px;
+}
+.planSwipe .spBody::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.15);
+  border-radius: 10px;
+}
+
+
+/* label */
+.planSwipe .spLabel {
+  font-size: 11px !important;
+  opacity: 0.65;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 8px;
+  display: block !important;
+  color: #ff9a2a !important;
+}
+
+/* value */
+.planSwipe .spValue {
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  margin-top: 2px;
+
+  display: -webkit-box !important;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+
+  overflow: hidden !important;
+  color: var(--text-primary, #fff) !important;
+}
+
+/* title */
+.planTitle {
+  font-size: 11px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  opacity: 0.65;
+  padding-left: 22px;
+  margin: 8px 0 6px;
+  position: relative;
+}
+
+.planTitle::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 6px;
+  height: 6px;
+  background: #ff8a1f;
+  border-radius: 2px;
+}
+.planCard .planSwipe {
+  padding-left: 12px;
+  padding-right: 12px;
+  flex: 1;
+  overflow-x: auto !important;
+  overflow-y: hidden;
+  height: 100%;
+  align-items: stretch;
+}
+.planCard .card-head {
+  margin-bottom: 6px;
+}
+.planCard {
+  
+  display: flex;
+  flex-direction: column;
+  
+  overflow: hidden; /* ⭐ KRİTİK */
+  height: 38vh;
+  max-height: 420px;
+  max-height: none;
+}
