@@ -1,206 +1,285 @@
-/* SADECE swipe alanı */
+/* ============================================
+   SWIPE PLAN KARTI — swipe.css
+   Yatay: kartlar arası swipe ✅
+   Dikey: kart içeriği scroll ✅
+   ============================================ */
+
+/* --- Dış planCard sarmalayıcı --- */
+.planCard {
+  display: flex;
+  flex-direction: column;
+  height: 38vh;
+  max-height: 380px;
+  overflow: hidden; /* dış kenar kesimi */
+  margin-bottom: 12px
+}
+
+.planCard .card-head {
+  margin-bottom: 6px;
+}
+
+/* --- Ana swipe konteyneri --- */
+.planCard .planSwipe {
+  flex: 1;
+  min-height: 0;        /* ⭐ flex child scroll bug fix */
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0;
+}
+
 .planSwipe {
-  overflow-x: auto !important;
-  overflow-y: hidden !important;
+  overflow-x: auto;
+  overflow-y: hidden;
   scroll-snap-type: x mandatory;
   -webkit-overflow-scrolling: touch;
- min-height: 0; /* flex bug fix */
-  padding: 0 !important;
-  margin-bottom: 0 !important;
-
-  background: transparent !important;
-  border: none !important;
-  
-  scroll-padding-left: 0px;
+  min-height: 0;
+  padding: 0;
+  margin-bottom: 0;
+  background: transparent;
+  border: none;
+  scroll-padding-left: 0;
+  touch-action: pan-x;
 }
 
-/* wrapper */
+/* Yatay scrollbar gizle */
+.planSwipe::-webkit-scrollbar { display: none; }
+.planSwipe { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* --- Kart sarmalayıcı --- */
 .planSwipe .swipeWrap {
-  display: flex !important;
-  flex-wrap: nowrap !important;
-  gap: 0px; 
-  padding: 0;
-  height: 100%; 
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 0;
+  height: 100%;
   padding-left: 6px;
   padding-right: 6px;
+  align-items: stretch; /* ⭐ kartlar tam yüksekliği kaplasın */
 }
 
-/* SADECE swipe kartları */
+/* --- Swipe kartı --- */
 .planSwipe .spCard {
-  flex-shrink: 0 !important;
-  max-width: 340px !important;
-  height: 100% !important;
-  scroll-snap-align: center;
-  border-radius: 14px !important;
-  background: var(--card-bg, #1e293b) !important;
-  border: 1px solid rgba(255,255,255,0.1) !important;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.3) !important;
-  display: flex !important;
-  flex-direction: column !important;
-  padding: 0 !important;
-  margin: 0 !important;
+  flex-shrink: 0;
   width: 94%;
-  overflow: hidden;
+  max-width: 340px;
+  height: 100%;          /* swipeWrap yüksekliğini alır */
+  scroll-snap-align: center;
+  scroll-snap-stop: always;
+  border-radius: 14px;
+  background: var(--card-bg, #1e293b);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+
+  display: flex;
+  flex-direction: column; /* ⭐ header + body dikey yerleşim */
+
+  padding: 0;
+  margin: 0;
+
+  overflow: hidden;       /* kenar kesimi — scroll spBody'de */
   transform: scale(0.95);
-  transition: 0.25s;
-  scroll-snap-stop: always; /* 👈 Bu satırı ekleyin: Her kartta durmayı zorunlu kılar */
+  transition: transform 0.25s ease;
 }
 
 .planSwipe .spCard:active {
   transform: scale(1);
 }
-/* header */
+
+/* --- Kart başlığı --- */
 .planSwipe .spHeader {
-  background: linear-gradient(135deg, #ff7a00, #ff9a2a) !important;
-  color: white !important;
-  padding: 10px 12px !important;
+  flex-shrink: 0;         /* ⭐ başlık küçülmez, sabit kalır */
+  background: linear-gradient(135deg, #ff7a00, #ff9a2a);
+  color: #fff;
+  padding: 10px 12px;
   font-weight: 600;
   font-size: 13px;
   text-align: center;
-  flex-shrink: 0;
+  border-radius: 14px 14px 0 0;
 }
 
-/* body */
+/* --- Kart gövdesi — DİKEY SCROLL BURADAN --- */
 .planSwipe .spBody {
-  padding: 12px 14px !important;
-  overflow-y: auto !important;
-  flex: 1;
-  line-height: 1.4;
-  
+  flex: 1;                /* ⭐ kalan yüksekliği doldur */
+  min-height: 0;          /* ⭐ flex child scroll için zorunlu */
+  overflow-y: auto;       /* ⭐ dikey scroll aktif */
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+  touch-action: pan-x pan-y;
+
+  padding: 12px 14px;
+  line-height: 1.5;
 }
 
-/* scrollbar */
-.planSwipe .spBody::-webkit-scrollbar {
-  width: 3px;
-}
+/* İnce dikey scrollbar */
+.planSwipe .spBody::-webkit-scrollbar { width: 3px; }
+.planSwipe .spBody::-webkit-scrollbar-track { background: transparent; }
 .planSwipe .spBody::-webkit-scrollbar-thumb {
-  background: rgba(255,255,255,0.15);
+  background: rgba(255, 255, 255, 0.2);
   border-radius: 10px;
 }
 
-
-/* label */
+/* --- Etiket --- */
 .planSwipe .spLabel {
-  font-size: 11px !important;
-  opacity: 0.65;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-top: 8px;
-  display: block !important;
-  color: #ff9a2a !important;
-}
-
-/* value */
-.planSwipe .spValue {
-  font-size: 13px !important;
-  font-weight: 500 !important;
-  margin-top: 2px;
-
-  display: -webkit-box !important;
--webkit-line-clamp: 2; /* Safari ve eski tarayıcılar için */
-line-clamp: 2;         /* Modern standart yazım */
--webkit-box-orient: vertical;
-
-  overflow: hidden !important;
-  color: var(--text-primary, #fff) !important;
-}
-
-/*
-.planTitle {
+  display: block;
   font-size: 11px;
-  letter-spacing: 1px;
+  font-weight: 600;
   text-transform: uppercase;
-  opacity: 0.65;
-  padding-left: 22px;
-  margin: 8px 0 6px;
-  position: relative;
+  letter-spacing: 0.6px;
+  color: #ff9a2a;
+  margin-top: 10px;
+  margin-bottom: 2px;
 }
 
-.planTitle::before {
+.planSwipe .spLabel:first-child { margin-top: 0; }
+
+/* --- Değer metni — TAMAMI GÖRÜNÜR --- */
+.planSwipe .spValue {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary, #fff);
+  overflow: visible;
+  word-break: break-word;
+  line-height: 1.5;
+  /* line-clamp KALDIRILDI — tüm metin okunabilir */
+}
+
+/* ============================================
+   PLAN BAŞLIĞI (kart dışında)
+   ============================================ */
+.plan-title-outside {
+  display: flex;
+  align-items: center;
+  margin-left: 22px;
+  margin-bottom: 8px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary, #fff);
+}
+
+.plan-title-outside::before {
   content: "";
-  position: absolute;
-  left: 0;
-  top: 50%;
-  transform: translateY(-50%);
+  display: inline-block;
   width: 6px;
   height: 6px;
   background: #ff8a1f;
   border-radius: 2px;
-}*/
-.plan-title-outside {
-    /* Mevcut card-head stillerini korumak için benzer değerler */
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--text-primary, #fff);
-    
-    /* Hizalama Ayarları */
-    margin-left: 50px !important; /* Kartın scale(0.95) sonrası sol kenar hizası */
-    margin-bottom: 8px;
-    padding: 0 !important;
-    background: none !important;
-    border: none !important;
-    
-    display: flex;
-    align-items: center;
+  margin-right: 8px;
+  flex-shrink: 0;
+  
+}
+/* ============================================
+   TASARIM İYİLEŞTİRMELERİ
+   ============================================ */
+
+/* Kart yüksekliği artırıldı — içerik daha rahat görünsün */
+.planCard {
+  height: 46vh;
+  max-height: 440px;
 }
 
-/* İstersen önüne o turuncu noktayı tekrar ekleyebiliriz */
-.plan-title-outside::before {
-    content: "";
-    width: 6px;
-    height: 6px;
-    background: #ff8a1f;
-    border-radius: 2px;
-    margin-right: 8px;
-    display: inline-block;
+/* Swipe kart — daha belirgin gölge ve kenarlık */
+.planSwipe .spCard {
+  border: 1px solid rgba(255, 138, 31, 0.18);
+  box-shadow: 0 8px 28px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,138,31,0.08);
+  transform: scale(0.93);
 }
-.planCard .planSwipe {
-  padding-left: 0px;
-  padding-right: 12px;
-  flex: 1;
-  overflow-x: auto !important;
-  overflow-y: hidden;
-  height: 100%;
-  align-items: stretch;
+
+.planSwipe .spCard:active {
+  transform: scale(0.97);
 }
-.planCard .card-head {
+
+/* Header — gradient daha canlı, hafif text-shadow */
+.planSwipe .spHeader {
+  background: linear-gradient(135deg, #f76b00 0%, #ffaa33 100%);
+  padding: 11px 14px;
+  font-size: 13.5px;
+  letter-spacing: 0.3px;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.25);
+  box-shadow: 0 3px 10px rgba(255,120,0,0.3);
+}
+
+/* Sayfa göstergesi — nokta indikatörler */
+.swipeDots {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 0 2px;
+  flex-shrink: 0;
+}
+
+.swipeDot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.2);
+  transition: all 0.3s ease;
+}
+
+.swipeDot.active {
+  width: 18px;
+  border-radius: 3px;
+  background: #ff8a1f;
+}
+
+/* Label — hafif separator çizgisi */
+.planSwipe .spLabel {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255,255,255,0.05);
+}
+
+.planSwipe .spLabel:first-child {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+}
+
+/* Value — biraz daha okunabilir */
+.planSwipe .spValue {
+  font-size: 13.5px;
+  color: rgba(255,255,255,0.92);
+  margin-top: 3px;
+}
+
+/* Plan başlığı — ikon ve yazı */
+.plan-title-outside {
+  font-size: 12px;
+  letter-spacing: 0.8px;
+  text-transform: none;
+  opacity: 0.75;
+  margin-left: 16px;
   margin-bottom: 6px;
 }
-.planCard {
-  
-  display: flex;
-  flex-direction: column;
-  
-  overflow: hidden; /* ⭐ KRİTİK */
-  height: 38vh;
-  max-height: 420px;
-  max-height: none;
-}
 
-/* swipe.css dosyasının en altına ekleyin */
-.plan-title-outside {
-    /* Yazıyı kartın sol ucuyla hizalayan kritik değer */
-    margin-left: 22px !important; 
-    
-    /* Diğer stil düzenlemeleri */
-    display: flex !important;
-    align-items: center !important;
-    background: transparent !important;
-    border: none !important;
-    padding: 0 !important;
-    margin-bottom: 8px !important;
-    font-size: 13px !important;
-    font-weight: 600 !important;
-    color: #fff !important;
-}
-
-/* Önündeki turuncu nokta için */
 .plan-title-outside::before {
-    content: "";
-    width: 6px;
-    height: 6px;
-    background: #ff8a1f;
-    border-radius: 2px;
-    margin-right: 8px;
-    display: inline-block;
+  display: none;
+}
+
+.plan-title-outside .icon {
+  font-size: 16px;
+  color: #ff8a1f;
+  margin-right: 6px;
+  flex-shrink: 0;
+}
+
+/* Kart içi body scroll göstergesi — alt fade */
+.planSwipe .spCard::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 28px;
+  background: linear-gradient(transparent, rgba(18,28,45,0.85));
+  border-radius: 0 0 14px 14px;
+  pointer-events: none;
+}
+
+.planSwipe .spCard {
+  position: relative;
 }

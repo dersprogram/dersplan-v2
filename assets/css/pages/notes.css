@@ -1,12 +1,12 @@
 .appInner{
   max-width: 600px;
-  padding-top: 6px;
+  padding-top: 0px;
   padding-bottom: calc(var(--nav-height) + var(--frame-padding));
 }
 
 .card{
-  padding: 4px 12px;
-  margin-bottom: 7px;
+  padding: 2px 10px;
+  margin-bottom: 6px;
 }
 
 .card-head{
@@ -18,7 +18,10 @@
 }
 
 .card .accordion{
-  margin-top: 5px;
+  margin-top: 3px;
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease;
 }
 
 .card.open{
@@ -73,8 +76,8 @@ body{
 }
 
 textarea{
-  min-height: 70px;
-  font-size: 1rem;
+  min-height: 60px;
+  font-size: 0.95rem;
 }
 
 input{
@@ -241,7 +244,7 @@ input[type="date"]::-webkit-calendar-picker-indicator{
 }
 
 .card.open .accordion{
-  max-height: none;
+  max-height: 250px;
 }
 
 /* notes.css içindeki mevcut .card-head bloğunu bununla değiştir */
@@ -265,4 +268,11 @@ input[type="date"]::-webkit-calendar-picker-indicator{
 /* Sağdaki ok (dropdown) ikonu için ince ayar */
 .card-head .arrowIcon {
   font-size: 16px !important;
+}
+.title {
+  margin-top: 0;
+  margin-bottom: 6px;
+}
+#allNotes .card{
+  padding: 10px 14px;
 }

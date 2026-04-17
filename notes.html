@@ -22,13 +22,12 @@
     <div class="appInner">
       <div id="lessonScreen">
         <div class="title" id="lessonTitle">Ders</div>
-        <div class="card-head plan-title-outside">Yıllık Plan</div>
-          <div class="card planCard">
-  
-
-  <div class="planSwipe">
-    <div class="swipeWrap" id="planWrap"></div>
+        <div class="plan-title-outside"><span class="icon">calendar_month</span>Yıllık Plan</div>
+          <div class="card planCard" style="display:flex;flex-direction:column;">
+  <div class="planSwipe" style="flex:1;min-height:0;height:100%;">
+    <div class="swipeWrap" id="planWrap" style="height:100%;"></div>
   </div>
+  <div class="swipeDots" id="swipeDots"></div>
 </div>
         <div class="card" data-type="not">
           <div class="card-head">
@@ -340,6 +339,25 @@ function renderSwipe(data) {
     `;
     wrap.innerHTML += card;
   });
+
+  // Nokta indikatörler
+  const dotsEl = document.getElementById("swipeDots");
+  const planSwipe = document.querySelector(".planSwipe");
+  if (dotsEl && data.length > 1) {
+    dotsEl.innerHTML = data.map((_, i) =>
+      `<div class="swipeDot${i === 0 ? " active" : ""}" data-i="${i}"></div>`
+    ).join("");
+    if (planSwipe) {
+      planSwipe.addEventListener("scroll", function() {
+        const cards = wrap.querySelectorAll(".spCard");
+        const cw = cards[0] ? cards[0].offsetWidth : planSwipe.offsetWidth;
+        const idx = Math.round(planSwipe.scrollLeft / cw);
+        dotsEl.querySelectorAll(".swipeDot").forEach((d, i) => {
+          d.classList.toggle("active", i === idx);
+        });
+      }, { passive: true });
+    }
+  }
 }
 
 function render(){
@@ -610,6 +628,25 @@ document.addEventListener("click", function(event){
 
   card.classList.toggle("open");
   arrow?.classList.toggle("open");
+  if (card.classList.contains("open")) {
+  setTimeout(() => {
+    const nav = document.querySelector(".nav");
+    const navHeight = nav ? nav.offsetHeight : 80;
+
+    const rect = card.getBoundingClientRect();
+    const bottomSpace = window.innerHeight - rect.bottom;
+
+    // Eğer kartın altı nav'ın altına giriyorsa kaydır
+    if (bottomSpace < navHeight + 10) {
+      const scrollAmount = (navHeight + 20) - bottomSpace;
+
+      window.scrollBy({
+        top: scrollAmount,
+        behavior: "smooth"
+      });
+    }
+  }, 200);
+}
 });
 </script>
 </body>
