@@ -358,6 +358,74 @@ function renderSwipe(data) {
       }, { passive: true });
     }
   }
+
+  // Bulunulan haftaya scroll et
+  scrollToCurrentWeek(data);
+}
+
+function scrollToCurrentWeek(data) {
+  const planSwipe = document.querySelector(".planSwipe");
+  const wrap = document.getElementById("planWrap");
+  if (!planSwipe || !wrap) return;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  // Eylül başlangıcını baz al (Eylül-Aralık = bu yıl, Ocak-Haziran = geçen yılın eylülü)
+  const sepYear = today.getMonth() >= 8 ? today.getFullYear() : today.getFullYear() - 1;
+
+  const months = {
+    "ocak": 1, "şubat": 2, "mart": 3, "nisan": 4, "mayıs": 5, "haziran": 6,
+    "temmuz": 7, "ağustos": 8, "eylül": 9, "ekim": 10, "kasım": 11, "aralık": 12
+  };
+
+  let currentIdx = 0;
+  let found = false;
+
+  data.forEach((item, i) => {
+    // Örn: "1. Hafta: 8-12 Eylül" veya "14. Hafta: 6-10 Ocak"
+    const match = item.hafta.match(/(\d+)[^-\d]*-\s*(\d+)\s*([A-Za-zÇçĞğİıÖöŞşÜü]+)/);
+    if (!match) return;
+
+    const startDay = parseInt(match[1]);
+    const endDay   = parseInt(match[2]);
+    const monthStr = match[3].toLowerCase();
+    const monthNum = months[monthStr];
+    if (!monthNum) return;
+
+    // Eylül-Aralık = sepYear, Ocak-Ağustos = sepYear+1
+    const year = monthNum >= 9 ? sepYear : sepYear + 1;
+
+    const weekStart = new Date(year, monthNum - 1, startDay);
+    weekStart.setHours(0, 0, 0, 0);
+    const weekEnd = new Date(year, monthNum - 1, endDay);
+    weekEnd.setHours(23, 59, 59, 999);
+
+    if (today >= weekStart && today <= weekEnd) {
+      currentIdx = i;
+      found = true;
+    } else if (!found && today > weekEnd) {
+      // Henüz eşleşme yok ama bu hafta geçmişte — en son geçmiş haftayı tut
+      currentIdx = i;
+    }
+  });
+
+  // Nokta indikatörünü güncelle
+  const dotsEl = document.getElementById("swipeDots");
+  if (dotsEl) {
+    dotsEl.querySelectorAll(".swipeDot").forEach((d, i) => {
+      d.classList.toggle("active", i === currentIdx);
+    });
+  }
+
+  // Karta scroll et (DOM render tamamlandıktan sonra)
+  requestAnimationFrame(() => {
+    const cards = wrap.querySelectorAll(".spCard");
+    if (cards[currentIdx]) {
+      const cardWidth = cards[currentIdx].offsetWidth;
+      planSwipe.scrollLeft = currentIdx * cardWidth;
+    }
+  });
 }
 
 function render(){
