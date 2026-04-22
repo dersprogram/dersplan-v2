@@ -1,3 +1,9 @@
+# Editor & tool configs
+.vscode/
+.claude/
+*.local.json
+notes2html
+
 # Compiled class file
 *.class
 
