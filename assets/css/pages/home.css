@@ -169,7 +169,7 @@
 
 .tblRow{
   display: grid;
-  grid-template-columns: 35px 38px 1fr max-content !important;
+  grid-template-columns: 40px 1fr max-content !important;
   gap: 0;
   padding: 10px 10px;
   align-items: center;
@@ -187,6 +187,14 @@
   padding-left: 12px;
   color: var(--color-accent);
   font-weight: 700;
+}
+
+.tblClsPrefix{
+  color: var(--text-primary);
+  font-weight: 800;
+  font-size: var(--font-sm);
+  opacity: .75;
+  margin-right: 1px;
 }
 
 .tblCls{

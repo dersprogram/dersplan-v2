@@ -231,21 +231,6 @@ if(window.location.hostname === "127.0.0.1"){
         </div>
       </div>
 
-      <div class="card" id="classCard">
-        <div class="card-head">
-          <span class="icon">co_present</span>
-          Sınıf / Şube
-          <span class="arrow">&#9662;</span>
-        </div>
-        <div class="accordion">
-          <div style="display:flex; gap:8px; margin-bottom:10px;">
-            <input class="input" id="classInp" placeholder="Örn: 12/A" style="flex:1"/>
-            <button class="ctrl" onclick="addItem('classes', 'classInp')" style="width:auto; padding:0 15px; background:var(--color-accent); font-weight:bold;">EKLE</button>
-          </div>
-          <div id="classList" style="display:flex; flex-wrap:wrap; gap:6px;"></div>
-        </div>
-      </div>
-
       <div class="card">
         <div class="card-head">
           <span class="icon">menu_book</span>
@@ -254,6 +239,7 @@ if(window.location.hostname === "127.0.0.1"){
         </div>
         <div class="accordion">
           <div style="display:flex; gap:8px; margin-bottom:10px;">
+            <input class="input" id="classLessonInp" placeholder="Sınıf (örn: 10-A)" style="width:90px; flex:none;"/>
             <input class="input" id="lessonInp" placeholder="Örn: Matematik" style="flex:1"/>
             <div class="color-trigger" id="mainColorTrigger" onclick="openPicker(event, 'main')"></div>
             <button class="ctrl" onclick="addItem('lessons', 'lessonInp')" style="width:auto; padding:0 15px; background:var(--color-accent); font-weight:bold;">EKLE</button>
@@ -910,7 +896,11 @@ function addItem(type, inputId){
   if(!value) return;
 
   if(type === "lessons"){
-    appData.lessons.push({ name: value, color: appData.lastColor });
+    const cls = (document.getElementById("classLessonInp")?.value || "").trim();
+    const fullName = cls ? cls + " - " + value : value;
+    appData.lessons.push({ name: fullName, color: appData.lastColor });
+    const clsInp = document.getElementById("classLessonInp");
+    if(clsInp) clsInp.value = "";
   }else{
     appData.classes.push(value);
   }
@@ -945,12 +935,7 @@ function renderUserCard(){
 
 function renderSettingsUI(){
   document.getElementById("mainColorTrigger").style.background = appData.lastColor;
-  const sortedClasses = getSortedClasses();
   const sortedLessons = getSortedLessons();
-
-  document.getElementById("classList").innerHTML = sortedClasses.map(({ entry, index }) =>
-    '<div class="chip">' + entry + ' <span class="remove" onclick="removeItem(\'classes\',' + index + ')">x</span></div>'
-  ).join("");
 
   const isStudent = appData.settings.role === "student";
   document.getElementById("lessonList").innerHTML = sortedLessons.map(({ entry, index }) => {
@@ -1003,9 +988,7 @@ function renderScheduleHeader(){
   const isStudent = appData.settings.role === "student";
 
   header.className = "table-grid " + (isStudent ? "student" : "teacher");
-  header.innerHTML = isStudent
-    ? "<div>#</div><div>DERS</div><div>SAAT</div><div></div>"
-    : "<div>#</div><div>SINIF</div><div>DERS</div><div>SAAT</div><div></div>";
+  header.innerHTML = "<div>#</div><div>DERS</div><div>SAAT</div><div></div>";
 }
 
 function renderSchedule(){
@@ -1021,7 +1004,6 @@ function renderSchedule(){
   const dayData = getScheduleRows(day);
   const slots = generateTimeSlots(dayData.length);
   const isStudent = appData.settings.role === "student";
-  const sortedClasses = getSortedClasses();
   const sortedLessons = getSortedLessons();
   const editable = isEditableDay(day);
   container.innerHTML = "";
@@ -1029,17 +1011,6 @@ function renderSchedule(){
   dayData.forEach((row, index) => {
     const div = document.createElement("div");
     div.className = "row table-grid " + (isStudent ? "student" : "teacher");
-
-    const classCell = !isStudent
-      ? (
-        editable
-          ? '<select class="ctrl" onchange="upd(' + index + ',\'class\',this.value)">' +
-            '<option value="">-</option>' +
-            sortedClasses.map(({ entry }) => '<option ' + (row.class === entry ? "selected" : "") + ">" + entry + "</option>").join("") +
-            "</select>"
-          : '<div class="ctrl" onclick="showGuestPrompt(\'Bu günü düzenlemek için kayıt olun.\')">' + (row.class || "-") + "</div>"
-      )
-      : "";
 
     const lessonCell = editable
       ? '<select class="ctrl" onchange="upd(' + index + ',\'lesson\',this.value)">' +
@@ -1061,7 +1032,6 @@ function renderSchedule(){
 
     div.innerHTML = [
       '<div style="color:var(--color-accent);font-weight:bold;text-align:center">' + (index + 1) + "</div>",
-      classCell,
       lessonCell,
       timeCell,
       deleteCell
@@ -1365,7 +1335,8 @@ window.onload = async () => {
     const studentMode = appData.settings.role === "student";
     if(studentWrap) studentWrap.style.display = studentMode && !isGuest() ? "block" : "none";
     if(guestStudentWrap) guestStudentWrap.style.display = studentMode && isGuest() ? "block" : "none";
-    if(classCard) classCard.style.display = studentMode ? "none" : "block";
+    const clsInp = document.getElementById("classLessonInp");
+    if(clsInp) clsInp.style.display = studentMode ? "none" : "";
   }
 
   function updateRoleButtons(){

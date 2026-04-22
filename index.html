@@ -109,21 +109,18 @@
   }
 
   function buildLessonKey(className, lessonName){
-    const cls = String(className || "").trim();
     const lesson = String(lessonName || "").trim();
-
     if(!lesson || lesson === "-") return lesson || "-";
-    if(role === "student") return lesson;
-    if(cls && cls !== "-") return cls + " - " + lesson;
+    if(role === "student"){
+      const parts = lesson.split(" - ");
+      return parts.length > 1 ? parts.slice(1).join(" - ") : lesson;
+    }
     return lesson;
   }
 
   function buildTeacherLessonKey(className, lessonName){
-    const cls = String(className || "").trim();
     const lesson = String(lessonName || "").trim();
-
     if(!lesson || lesson === "-") return lesson || "-";
-    if(cls && cls !== "-") return cls + " - " + lesson;
     return lesson;
   }
 
@@ -323,7 +320,6 @@
       row.className = "tblRow";
       row.innerHTML = [
         '<div class="tblNo">-</div>',
-        '<div class="tblCls">-</div>',
         '<div class="tblLes tblMuted">Bu gün için kayıt yok</div>',
         '<div class="tblTime"></div>'
       ].join("");
@@ -349,6 +345,7 @@
       }
 
       row.className = showNoteDot ? "tblRow hasNote" : "tblRow";
+      row.dataset.lessonKey = lesson;
       if(index === lessonState.current){
         row.classList.add("currentLesson");
       }else if(index === lessonState.next){
@@ -357,8 +354,15 @@
 
       row.innerHTML = [
         '<div class="tblNo"><span class="rowNoteDot"></span>' + (index + 1) + "</div>",
-        '<div class="tblCls">' + className + "</div>",
-        '<div class="tblLes" style="color:' + lessonColorOf(lesson, rowData.color) + '">' + lesson + "</div>",
+        (function(){
+          const sep = lesson.indexOf(" - ");
+          if(sep === -1) return '<div class="tblLes" style="color:' + lessonColorOf(lesson, rowData.color) + '">' + lesson + "</div>";
+          const cls = lesson.slice(0, sep);
+          const name = lesson.slice(sep + 3);
+          return '<div class="tblLes" style="color:' + lessonColorOf(lesson, rowData.color) + '">'
+            + '<span class="tblClsPrefix">' + cls + ' </span>'
+            + name + "</div>";
+        })(),
         '<div class="tblTime">' + time + "</div>"
       ].join("");
 
@@ -460,13 +464,10 @@
     const row = event.target.closest(".tblRow");
     if(!row) return;
 
-    const classEl = row.querySelector(".tblCls");
-    const lessonEl = row.querySelector(".tblLes");
     const dayChip = document.querySelector(".day.active");
 
     const dayName = dayChip ? dayChip.textContent.trim() : "";
-    const className = classEl ? classEl.textContent.trim() : "";
-    const lesson = lessonEl ? lessonEl.textContent.trim() : "";
+    const lesson = row.dataset.lessonKey || "";
 
     if(!lesson || lesson === "-" || !dayName) return;
     if(isGuest && dayName !== todayName){
@@ -474,7 +475,7 @@
       return;
     }
 
-    const lessonKey = buildLessonKey(className, lesson);
+    const lessonKey = buildLessonKey("", lesson);
     openLessonNoteForm(dayName, lessonKey);
   });
 })();

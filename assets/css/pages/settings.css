@@ -220,7 +220,7 @@ body{
 }
 
 .table-grid.teacher{
-  grid-template-columns: 15px 70px 1fr 90px 18px;
+  grid-template-columns: 15px 1fr 90px 18px;
 }
 
 .table-grid.student{

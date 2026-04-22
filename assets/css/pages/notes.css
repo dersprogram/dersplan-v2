@@ -244,7 +244,7 @@ input[type="date"]::-webkit-calendar-picker-indicator{
 }
 
 .card.open .accordion{
-  max-height: 250px;
+  max-height: 800px;
 }
 
 /* notes.css içindeki mevcut .card-head bloğunu bununla değiştir */
@@ -275,4 +275,38 @@ input[type="date"]::-webkit-calendar-picker-indicator{
 }
 #allNotes .card{
   padding: 10px 14px;
+}
+
+/* Dot + arrow sağ grubunu her zaman sağa iter */
+.card-head-right{
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* Kart başlığındaki not indikatör noktası */
+.cardNoteDot{
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  box-shadow: 0 0 0 3px var(--color-accent-soft);
+  flex-shrink: 0;
+  display: none;
+  pointer-events: none;
+}
+
+.cardNoteDot.hasDot{
+  display: inline-block;
+}
+
+.card.open .cardNoteDot{
+  display: none !important;
+}
+
+/* İçerik olmadığında liste ayracı görünmesin */
+.accordion .list:empty{
+  display: none;
 }
