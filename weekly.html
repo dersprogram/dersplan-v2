@@ -246,10 +246,14 @@ function renderGrid(){
       if(slotIndex === slotCount - 1 && !hasLunchBreak) cell.classList.add("lastRow");
 
       if(currentRow){
-        const cls = (currentRow.class || "").trim();
-        const lesson = (currentRow.lesson || "").trim();
-        const lessonText = abbrLessonName(lesson, portrait);
-        const lessonColor = lessonColorOf(appData, lesson, currentRow.color);
+        const rawLesson = (currentRow.lesson || "").trim();
+        const sep = rawLesson.indexOf(" - ");
+        const cls = sep !== -1
+          ? rawLesson.slice(0, sep)
+          : (currentRow.class || "").trim();
+        const lessonName = sep !== -1 ? rawLesson.slice(sep + 3) : rawLesson;
+        const lessonText = abbrLessonName(lessonName, portrait);
+        const lessonColor = lessonColorOf(appData, rawLesson, currentRow.color);
         cell.innerHTML = renderLessonHTML(role, cls, lessonText, lessonColor);
       }
 
