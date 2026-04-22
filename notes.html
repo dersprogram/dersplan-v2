@@ -22,8 +22,8 @@
     <div class="appInner">
       <div id="lessonScreen">
         <div class="title" id="lessonTitle">Ders</div>
-        <div class="plan-title-outside"><span class="icon">calendar_month</span>Yıllık Plan</div>
-          <div class="card planCard" style="display:flex;flex-direction:column;">
+        <div class="plan-title-outside" id="planTitleOutside"><span class="icon">calendar_month</span>Yıllık Plan</div>
+          <div class="card planCard" id="planCard" style="display:flex;flex-direction:column;">
   <div class="planSwipe" style="flex:1;min-height:0;height:100%;">
     <div class="swipeWrap" id="planWrap" style="height:100%;"></div>
   </div>
@@ -125,6 +125,14 @@ function getAppData(){
 
 function getRole(){
   return getAppData()?.settings?.role || "teacher";
+}
+
+function applyPlanVisibility(){
+  const isStudent = getRole() === "student";
+  const card  = document.getElementById("planCard");
+  const title = document.getElementById("planTitleOutside");
+  if(card)  card.style.display  = isStudent ? "none" : "flex";
+  if(title) title.style.display = isStudent ? "none" : "";
 }
 
 function isGuest(){
@@ -311,30 +319,112 @@ function save(type){
 }
 let planDataGlobal = {};
 
-fetch("assets/data/aihl_kelam.json")
-  .then(res => res.json())
-  .then(d => { planDataGlobal = d; renderSwipe(d); })
-  .catch(err => console.error("JSON HATA:", err));
+// Dersin planPath'ini appData'dan oku ve Firebase'den çek
+async function loadPlanFromFirebase(){
+  const appData = AppShell.loadAppData() || {};
+  const lessons = appData.lessons || [];
+  const params = new URLSearchParams(location.search);
+  const lessonParam = params.get("lesson") || "";
+
+  // lessonParam formatı: "9/D - Temel Dini Bilgiler" veya "Temel Dini Bilgiler"
+  const lessonName = lessonParam.includes(" - ") ? lessonParam.split(" - ")[1].trim() : lessonParam.trim();
+
+  // Ders adına göre planPath bul
+  const lessonObj = lessons.find(l =>
+    l.name && l.name.trim().toLowerCase() === lessonName.toLowerCase()
+  );
+
+  const planPath = lessonObj?.planPath || null;
+
+  if(!planPath){
+    // Plan atanmamış — boş kart göster
+    renderSwipe([]);
+    return;
+  }
+
+  try{
+    const { getDatabase, ref, get } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js");
+    const { app } = await import("./assets/js/firebase.js");
+    const db = getDatabase(app);
+    const snapshot = await get(ref(db, "yillik-planlar/" + planPath));
+
+    if(!snapshot.exists()){
+      renderSwipe([]);
+      return;
+    }
+
+    const val = snapshot.val();
+    // Yeni yapı: {ad: "...", plan: [...]}
+    // Eski yapı: direkt array
+    let planArr;
+    if(val && val.plan){
+      planArr = Array.isArray(val.plan) ? val.plan : Object.values(val.plan);
+    } else {
+      planArr = Array.isArray(val) ? val : Object.values(val);
+    }
+    planDataGlobal = planArr;
+    renderSwipe(planArr);
+  }catch(err){
+    console.error("Plan yükleme hatası:", err);
+    renderSwipe([]);
+  }
+}
+
+loadPlanFromFirebase();
+
+// Alan isimlerini güzel Türkçe başlığa çevirir
+function formatFieldLabel(key) {
+  const labels = {
+    unite:               "Ünite",
+    unite_tema:          "Ünite / Tema",
+    konu:                "Konu",
+    konu_icerik_cercevesi: "Konu / İçerik Çerçevesi",
+    kazanim:             "Kazanım",
+    kazanim_aciklamasi:  "Kazanım Açıklaması",
+    ogrenme_ciktilari:   "Öğrenme Çıktıları",
+    surec_bilesenleri:   "Süreç Bileşenleri",
+    aciklama:            "Açıklama",
+  };
+  if(labels[key]) return labels[key];
+  return key.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+}
 
 function renderSwipe(data) {
   const wrap = document.getElementById("planWrap");
   if(!wrap) return;
   wrap.innerHTML = "";
 
-  data.forEach(item => {
+  const FIELD_ORDER = [
+    "unite",
+    "unite_tema",
+    "konu",
+    "konu_icerik_cercevesi",
+    "kazanim",
+    "kazanim_aciklamasi",
+    "ogrenme_ciktilari",
+    "surec_bilesenleri",
+    "aciklama",
+  ];
+
+  const filtered = data.filter(item =>
+    item.belirli_gun_ve_haftalar !== "BELİRLİ GÜN VE HAFTALAR"
+  );
+
+  filtered.forEach(item => {
+    const knownKeys = FIELD_ORDER.filter(k => k in item);
+    const unknownKeys = Object.keys(item).filter(k => k !== "hafta" && !FIELD_ORDER.includes(k));
+    const orderedKeys = [...knownKeys, ...unknownKeys];
+
+    const bodyHtml = orderedKeys
+      .map(key =>
+        `<span class="spLabel">${formatFieldLabel(key)}</span>` +
+        `<span class="spValue">${item[key] || "-"}</span>`
+      ).join("");
+
     const card = `
       <div class="spCard">
-        <div class="spHeader">${item.hafta}</div>
-        <div class="spBody">
-          <span class="spLabel">Ünite</span>
-          <span class="spValue">${item.unite || "-"}</span>
-          <span class="spLabel">Konu</span>
-          <span class="spValue">${item.konu || "-"}</span>
-          <span class="spLabel">Kazanım</span>
-          <span class="spValue">${item.kazanim || "-"}</span>
-          <span class="spLabel">Açıklama</span>
-          <span class="spValue">${item.aciklama || "-"}</span>
-        </div>
+        <div class="spHeader">${item.hafta || ""}</div>
+        <div class="spBody">${bodyHtml}</div>
       </div>
     `;
     wrap.innerHTML += card;
@@ -343,8 +433,8 @@ function renderSwipe(data) {
   // Nokta indikatörler
   const dotsEl = document.getElementById("swipeDots");
   const planSwipe = document.querySelector(".planSwipe");
-  if (dotsEl && data.length > 1) {
-    dotsEl.innerHTML = data.map((_, i) =>
+  if (dotsEl && filtered.length > 1) {
+    dotsEl.innerHTML = filtered.map((_, i) =>
       `<div class="swipeDot${i === 0 ? " active" : ""}" data-i="${i}"></div>`
     ).join("");
     if (planSwipe) {
@@ -360,7 +450,7 @@ function renderSwipe(data) {
   }
 
   // Bulunulan haftaya scroll et
-  scrollToCurrentWeek(data);
+  scrollToCurrentWeek(filtered);
 }
 
 function scrollToCurrentWeek(data) {
@@ -384,7 +474,7 @@ function scrollToCurrentWeek(data) {
 
   data.forEach((item, i) => {
     // Örn: "1. Hafta: 8-12 Eylül" veya "14. Hafta: 6-10 Ocak"
-    const match = item.hafta.match(/(\d+)[^-\d]*-\s*(\d+)\s*([A-Za-zÇçĞğİıÖöŞşÜü]+)/);
+    const match = (item.hafta || "").match(/(\d+)[^-\d]*-\s*(\d+)\s*([A-Za-zÇçĞğİıÖöŞşÜü]+)/);
     if (!match) return;
 
     const startDay = parseInt(match[1]);
@@ -671,6 +761,7 @@ if(mode === "list"){
 }
 
 applyAccessState();
+applyPlanVisibility();
 if(accessLocked && mode !== "list"){
   showRestrictedPrompt();
 }

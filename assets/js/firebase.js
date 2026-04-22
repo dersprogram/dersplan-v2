@@ -8,6 +8,7 @@ import {
 export const firebaseConfig = {
   apiKey: "AIzaSyDVPbMlOf6pczo_Yh_Z62VAg30ah5KLQJc",
   authDomain: "derstakippro-bbbb3.firebaseapp.com",
+  databaseURL: "https://derstakippro-bbbb3-default-rtdb.europe-west1.firebasedatabase.app",
   projectId: "derstakippro-bbbb3",
   storageBucket: "derstakippro-bbbb3.firebasestorage.app",
   messagingSenderId: "706136035599",
