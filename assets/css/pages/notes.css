@@ -310,3 +310,9 @@ input[type="date"]::-webkit-calendar-picker-indicator{
 .accordion .list:empty{
   display: none;
 }
+
+/* Liste doluysa altındaki textarea'ya boşluk ver */
+.accordion .list:not(:empty) + textarea,
+.accordion .list:not(:empty) + .dateWrap{
+  margin-top: 12px;
+}
