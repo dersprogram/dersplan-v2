@@ -15,6 +15,9 @@
 <link rel="stylesheet" href="assets/css/components.css?v=20260409-2">
 <link rel="stylesheet" href="assets/css/pages/notes.css?v=20260409-2">
 <link rel="stylesheet" href="assets/css/pages/swipe.css">
+<style>
+.title { margin-bottom: 18px; }
+</style>
 </head>
 <body>
 <div class="appFrame">
@@ -328,17 +331,13 @@ function render(){
           text = entry.date + " - " + entry.text;
         }
 
-        if(type === "sinav" || type === "day"){
-          div.innerHTML = [
-            '<div class="item-text">' + text + "</div>",
-            '<div class="icons">',
-            '<span class="cardIcon editIcon" onclick="event.stopPropagation(); edit(' + entry.id + ')"></span>',
-            '<span class="cardIcon deleteIcon" onclick="event.stopPropagation(); del(this,' + entry.id + ')"></span>',
-            "</div>",
-          ].join("");
-        }else{
-          div.innerHTML = '<div class="item-text">' + text + "</div>";
-        }
+        div.innerHTML = [
+          '<div class="item-text">' + text + "</div>",
+          '<div class="icons">',
+          '<span class="cardIcon editIcon" onclick="event.stopPropagation(); edit(' + entry.id + ')"></span>',
+          '<span class="cardIcon deleteIcon" onclick="event.stopPropagation(); del(this,' + entry.id + ')"></span>',
+          "</div>",
+        ].join("");
 
         list.appendChild(div);
       });
