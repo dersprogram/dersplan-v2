@@ -83,6 +83,7 @@ if(window.location.hostname === "127.0.0.1"){
               <div id="passwordPanel" class="accountPanel" style="display:none;">
                 <div class="accountPanelTitle">Şifre Değiştir</div>
                 <form autocomplete="on" onsubmit="return false;">
+                <input type="text" name="username" autocomplete="username" hidden>
                 <div class="accountPanelFields">
                   <input class="input" id="currentPassword" placeholder="Mevcut Şifre" type="password" autocomplete="current-password"/>
                   <input class="input" id="newPassword" placeholder="Yeni Şifre" type="password" autocomplete="new-password"/>
@@ -154,7 +155,7 @@ if(window.location.hostname === "127.0.0.1"){
                 <form autocomplete="on" onsubmit="return false;">
                 <div class="registerFormFields">
                   <input class="input" id="registerName" placeholder="Ad Soyad" type="text" autocomplete="name"/>
-                  <input class="input" id="registerEmail" placeholder="E-posta" type="email" autocomplete="email"/>
+                  <input class="input" id="registerEmail" placeholder="E-posta" type="email" autocomplete="username email"/>
                   <input class="input" id="registerPassword" placeholder="Şifre" type="password" autocomplete="new-password"/>
                 </div>
                 </form>
@@ -169,7 +170,7 @@ if(window.location.hostname === "127.0.0.1"){
                 <div class="registerFormTitle">Giriş Yap</div>
                 <form autocomplete="on" onsubmit="return false;">
                 <div class="registerFormFields">
-                  <input class="input" id="loginEmail" placeholder="E-posta" type="email" autocomplete="email"/>
+                  <input class="input" id="loginEmail" placeholder="E-posta" type="email" autocomplete="username email"/>
                   <input class="input" id="loginPassword" placeholder="Şifre" type="password" autocomplete="current-password"/>
                 </div>
                 </form>
