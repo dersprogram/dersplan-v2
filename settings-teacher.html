@@ -79,11 +79,13 @@ if(window.location.hostname === "127.0.0.1"){
 
               <div id="passwordPanel" class="accountPanel" style="display:none;">
                 <div class="accountPanelTitle">Şifre Değiştir</div>
+                <form autocomplete="on" onsubmit="return false;">
                 <div class="accountPanelFields">
-                  <input class="input" id="currentPassword" placeholder="Mevcut Şifre" type="password"/>
-                  <input class="input" id="newPassword" placeholder="Yeni Şifre" type="password"/>
-                  <input class="input" id="repeatPassword" placeholder="Yeni Şifre Tekrar" type="password"/>
+                  <input class="input" id="currentPassword" placeholder="Mevcut Şifre" type="password" autocomplete="current-password"/>
+                  <input class="input" id="newPassword" placeholder="Yeni Şifre" type="password" autocomplete="new-password"/>
+                  <input class="input" id="repeatPassword" placeholder="Yeni Şifre Tekrar" type="password" autocomplete="new-password"/>
                 </div>
+                </form>
                 <div class="accountPanelError" id="passwordError" style="display:none;"></div>
                 <div class="accountPanelSuccess" id="passwordSuccess" style="display:none;"></div>
                 <div class="accountPanelActions">
@@ -143,11 +145,13 @@ if(window.location.hostname === "127.0.0.1"){
 
               <div id="guestRegisterForm" style="display:none;">
                 <div class="registerFormTitle">Kayıt Ol</div>
+                <form autocomplete="on" onsubmit="return false;">
                 <div class="registerFormFields">
-                  <input class="input" id="registerName" placeholder="Ad Soyad" type="text"/>
-                  <input class="input" id="registerEmail" placeholder="E-posta" type="email"/>
-                  <input class="input" id="registerPassword" placeholder="Şifre" type="password"/>
+                  <input class="input" id="registerName" placeholder="Ad Soyad" type="text" autocomplete="name"/>
+                  <input class="input" id="registerEmail" placeholder="E-posta" type="email" autocomplete="email"/>
+                  <input class="input" id="registerPassword" placeholder="Şifre" type="password" autocomplete="new-password"/>
                 </div>
+                </form>
                 <div class="registerFormError" id="registerError" style="display:none;"></div>
                 <div class="registerFormActions">
                   <button type="button" onclick="submitRegister()" style="background:var(--color-accent); color:#000; font-weight:700;">Kaydı Tamamla</button>
@@ -157,10 +161,12 @@ if(window.location.hostname === "127.0.0.1"){
 
               <div id="guestLoginForm" style="display:none;">
                 <div class="registerFormTitle">Giriş Yap</div>
+                <form autocomplete="on" onsubmit="return false;">
                 <div class="registerFormFields">
-                  <input class="input" id="loginEmail" placeholder="E-posta" type="email"/>
-                  <input class="input" id="loginPassword" placeholder="Şifre" type="password"/>
+                  <input class="input" id="loginEmail" placeholder="E-posta" type="email" autocomplete="email"/>
+                  <input class="input" id="loginPassword" placeholder="Şifre" type="password" autocomplete="current-password"/>
                 </div>
+                </form>
                 <div class="registerFormError" id="loginError" style="display:none;"></div>
                 <div class="registerFormActions">
                   <button type="button" onclick="submitLogin()" style="background:var(--color-accent); color:#000; font-weight:700;">Giriş Yap</button>
@@ -966,7 +972,7 @@ function renderSettingsUI(){
 
 function generateTimeSlots(rowCount){
   const slots = [];
-  let current = appData.settings.start;
+  let current = appData.settings.start || "08:00";
   const count = Math.max(rowCount, 1);
 
   for(let index = 1; index <= count; index += 1){
