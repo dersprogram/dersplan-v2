@@ -16,7 +16,13 @@
 <link rel="stylesheet" href="assets/css/pages/notes.css?v=20260409-2">
 <link rel="stylesheet" href="assets/css/pages/swipe.css">
 <style>
-.title { margin-bottom: 18px; }
+.title { margin-bottom: 10px; }
+/* Kayıtlar accordion dışında, kartın alt kısmında her zaman görünür */
+.card > .list { margin-top: 8px; }
+.card > .list:empty { display: none; }
+/* Açıkken accordion'un altı ile liste arasına çizgi */
+.card.open > .list:not(:empty) { border-top: 1px solid var(--border-normal); padding-top: 8px; }
+.card > .list:not(:empty) { border-top: 1px solid var(--border-normal); padding-top: 8px; }
 </style>
 </head>
 <body>
@@ -35,10 +41,10 @@
             <span class="card-head-right"><span class="cardNoteDot" id="notDot"></span><span class="arrow">&#9662;</span></span>
           </div>
           <div class="accordion">
-            <div class="list" id="notList"></div>
             <textarea id="notText"></textarea>
             <button onclick="save('not')">Kaydet</button>
           </div>
+          <div class="list" id="notList"></div>
         </div>
 
         <div class="card" data-type="odev">
@@ -48,10 +54,10 @@
             <span class="card-head-right"><span class="cardNoteDot" id="odevDot"></span><span class="arrow">&#9662;</span></span>
           </div>
           <div class="accordion">
-            <div class="list" id="odevList"></div>
             <textarea id="odevText"></textarea>
             <button onclick="save('odev')">Kaydet</button>
           </div>
+          <div class="list" id="odevList"></div>
         </div>
 
         <div class="card" data-type="sinav">
@@ -61,7 +67,6 @@
             <span class="card-head-right"><span class="cardNoteDot" id="sinavDot"></span><span class="arrow">&#9662;</span></span>
           </div>
           <div class="accordion">
-            <div class="list" id="sinavList"></div>
             <div class="dateWrap">
               <input type="date" id="sinavDate">
               <span class="dateIcon icon">event</span>
@@ -69,6 +74,7 @@
             <textarea id="sinavText"></textarea>
             <button onclick="save('sinav')">Kaydet</button>
           </div>
+          <div class="list" id="sinavList"></div>
         </div>
       </div>
 
