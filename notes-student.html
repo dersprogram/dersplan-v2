@@ -16,13 +16,13 @@
 <link rel="stylesheet" href="assets/css/pages/notes.css?v=20260409-2">
 <link rel="stylesheet" href="assets/css/pages/swipe.css">
 <style>
-.title { margin-bottom: 10px; }
-/* Kayıtlar accordion dışında, kartın alt kısmında her zaman görünür */
-.card > .list { margin-top: 8px; }
+.appInner { padding-top: 6px; }
+.card { padding: 7px 12px; margin-bottom: 7px; }
+.card-head { gap: 10px !important; padding: 3px 2px !important; font-size: .96rem !important; line-height: 1.05 !important; min-height: unset !important; }
+.card .accordion { margin-top: 5px; }
+textarea { min-height: 70px; font-size: 1rem; }
+.title { margin-top: var(--page-head-mt); margin-bottom: var(--page-head-mb); }
 .card > .list:empty { display: none; }
-/* Açıkken accordion'un altı ile liste arasına çizgi */
-.card.open > .list:not(:empty) { border-top: 1px solid var(--border-normal); padding-top: 8px; }
-.card > .list:not(:empty) { border-top: 1px solid var(--border-normal); padding-top: 8px; }
 </style>
 </head>
 <body>
@@ -32,13 +32,11 @@
       <div id="lessonScreen">
         <div class="title" id="lessonTitle">Ders</div>
 
-        <!-- Öğrenci: Yıllık Plan kartı ve başlığı DOM'da yok -->
-
         <div class="card" data-type="not">
           <div class="card-head">
             <span class="icon">edit_note</span>
             NOT
-            <span class="card-head-right"><span class="cardNoteDot" id="notDot"></span><span class="arrow">&#9662;</span></span>
+            <span class="arrow">&#9662;</span>
           </div>
           <div class="accordion">
             <textarea id="notText"></textarea>
@@ -51,7 +49,7 @@
           <div class="card-head">
             <span class="icon">edit_note</span>
             ÖDEV
-            <span class="card-head-right"><span class="cardNoteDot" id="odevDot"></span><span class="arrow">&#9662;</span></span>
+            <span class="arrow">&#9662;</span>
           </div>
           <div class="accordion">
             <textarea id="odevText"></textarea>
@@ -64,7 +62,7 @@
           <div class="card-head">
             <span class="icon">edit_note</span>
             SINAV
-            <span class="card-head-right"><span class="cardNoteDot" id="sinavDot"></span><span class="arrow">&#9662;</span></span>
+            <span class="arrow">&#9662;</span>
           </div>
           <div class="accordion">
             <div class="dateWrap">
@@ -156,7 +154,6 @@ function showRestrictedPrompt(){
   AppShell.showRegisterPrompt("Bu özelliğin tamamını kullanmak için kayıt olun.");
 }
 
-// Öğrenci: "9A - Matematik" → sadece "Matematik" gösterilir
 function setLessonTitle(lesson){
   const parts = lesson.split(" - ");
   const title = document.getElementById("lessonTitle");
@@ -196,18 +193,12 @@ function applyAccessState(){
   const buttons = document.querySelectorAll("#lessonScreen button, #dayScreen button");
   const heads = document.querySelectorAll("#lessonScreen .card-head, #dayScreen .card-head");
 
-  fields.forEach((field) => {
-    field.disabled = accessLocked;
-  });
-
+  fields.forEach((field) => { field.disabled = accessLocked; });
   buttons.forEach((button) => {
     button.disabled = accessLocked;
     button.style.opacity = accessLocked ? ".55" : "1";
   });
-
-  heads.forEach((head) => {
-    head.style.opacity = accessLocked ? ".65" : "1";
-  });
+  heads.forEach((head) => { head.style.opacity = accessLocked ? ".65" : "1"; });
 }
 
 const params = new URLSearchParams(location.search);
@@ -224,9 +215,7 @@ if(mode === "list"){
   document.getElementById("dayTitle").textContent = currentDay;
 }else{
   showScreen("lessonScreen");
-  if(lesson){
-    setLessonTitle(lesson);
-  }
+  if(lesson) setLessonTitle(lesson);
 }
 
 function save(type){
@@ -244,12 +233,10 @@ function save(type){
 
   if(type === "not") text = document.getElementById("notText").value;
   if(type === "odev") text = document.getElementById("odevText").value;
-
   if(type === "sinav"){
     text = document.getElementById("sinavText").value;
     date = document.getElementById("sinavDate").value;
   }
-
   if(type === "day") text = document.getElementById("dayText").value;
   if(!text && !date) return;
 
@@ -258,10 +245,7 @@ function save(type){
 
   if(editId){
     const item = dataset.find((entry) => entry.id === editId);
-    if(item){
-      item.text = text;
-      item.date = date;
-    }
+    if(item){ item.text = text; item.date = date; }
   }else{
     updatedId = Date.now();
     dataset.push({
@@ -297,16 +281,10 @@ function save(type){
     }
   }, 60);
 
-  document.querySelectorAll("#lessonScreen button").forEach((button) => {
-    button.textContent = "Kaydet";
-  });
-  document.querySelectorAll("#dayScreen button").forEach((button) => {
-    button.textContent = "Kaydet";
-  });
+  document.querySelectorAll("#lessonScreen button").forEach((button) => { button.textContent = "Kaydet"; });
+  document.querySelectorAll("#dayScreen button").forEach((button) => { button.textContent = "Kaydet"; });
 }
 
-// Öğrenci: loadPlanFromFirebase çağrılmaz, plan kartı HTML'de yok
-// Bu fonksiyon sadece edit() içindeki çağrı için stub olarak bırakılır
 function loadPlanFromFirebase(){
   // Öğrenci görünümünde yıllık plan gösterilmez
 }
@@ -318,7 +296,6 @@ function render(){
   ["not", "odev", "sinav", "day"].forEach((type) => {
     const list = document.getElementById(type + "List");
     if(!list) return;
-
     list.innerHTML = "";
 
     dataset
@@ -342,22 +319,11 @@ function render(){
           '<div class="icons">',
           '<span class="cardIcon editIcon" onclick="event.stopPropagation(); edit(' + entry.id + ')"></span>',
           '<span class="cardIcon deleteIcon" onclick="event.stopPropagation(); del(this,' + entry.id + ')"></span>',
-          "</div>",
+          "</div>"
         ].join("");
 
         list.appendChild(div);
       });
-  });
-
-  updateDots();
-}
-
-function updateDots(){
-  ["not", "odev", "sinav"].forEach(function(type){
-    const list = document.getElementById(type + "List");
-    const dot = document.getElementById(type + "Dot");
-    if(!dot) return;
-    dot.classList.toggle("hasDot", !!(list && list.children.length > 0));
   });
 }
 
@@ -402,7 +368,6 @@ function renderAll(){
     lessonCard.className = "card";
 
     const parts = lessonKey.split(" - ");
-    // Öğrenci: sadece ders adı gösterilir, sınıf kısmı atılır
     const les = parts.length > 1 ? parts.slice(1).join(" - ") : parts[0];
 
     lessonCard.innerHTML = [
@@ -429,7 +394,6 @@ function renderAll(){
         if(entry.type === "sinav" && entry.date){
           text = entry.date + " - " + entry.text;
         }
-
         html += [
           '<div class="item">',
           '<div class="item-text">' + text + "</div>",
@@ -510,7 +474,7 @@ function edit(id){
     setLessonTitle(note.lesson);
     document.getElementById("notText").value = note.text;
     render();
-    loadPlanFromFirebase(); // stub — öğrencide plan yüklenmez
+    loadPlanFromFirebase();
     requestAnimationFrame(() => openCard("not"));
   }
 
@@ -560,15 +524,11 @@ function del(element, id){
 }
 
 render();
-if(mode === "list"){
-  renderAll();
-}
+if(mode === "list") renderAll();
 
 applyAccessState();
 
-if(accessLocked && mode !== "list"){
-  showRestrictedPrompt();
-}
+if(accessLocked && mode !== "list") showRestrictedPrompt();
 
 document.addEventListener("click", function(event){
   const head = event.target.closest(".card-head");
