@@ -60,7 +60,7 @@
 const STORAGE_KEY = "ayarlar";
 const ALL_DAYS = AppShell.DAY_NAMES;
 
-function createCell(className, contentHTML = ""){
+function createCell(className, contentHTML){
   const el = document.createElement("div");
   el.className = className;
   if(contentHTML) el.innerHTML = contentHTML;
@@ -117,13 +117,8 @@ function lessonColorOf(appData, lessonName, fallbackColor){
 
 function dayShort(day){
   const map = {
-    Pazartesi: "Pzt",
-    Salı: "Sal",
-    Çarşamba: "Çar",
-    Perşembe: "Per",
-    Cuma: "Cum",
-    Cumartesi: "Cmt",
-    Pazar: "Paz"
+    Pazartesi: "Pzt", Salı: "Sal", Çarşamba: "Çar",
+    Perşembe: "Per", Cuma: "Cum", Cumartesi: "Cmt", Pazar: "Paz"
   };
   return map[day] || day;
 }
@@ -143,11 +138,9 @@ function abbrLessonName(name, portrait){
     if(parts.length === 1){
       return parts[0].length <= 5 ? parts[0].toUpperCase() : parts[0].substring(0, 5).toUpperCase();
     }
-
     if(parts.length === 2){
       return (parts[0][0] + "." + parts[1].substring(0, 3)).toUpperCase();
     }
-
     return parts.map((part) => part[0]).join("").toUpperCase();
   }
 
@@ -162,19 +155,11 @@ function abbrLessonName(name, portrait){
   return raw;
 }
 
-function renderLessonHTML(role, cls, lessonText, lessonColor){
-  if(role === "student"){
-    return '<div class="lessonPreview">' +
-             '<div class="lessonPreviewLesson" style="color:' + lessonColor + '">' + lessonText + "</div>" +
-           "</div>";
-  }
-
-  return [
-    '<div class="lessonPreview">',
-    '<div class="lessonPreviewClass">' + cls + "</div>",
-    '<div class="lessonPreviewLesson" style="color:' + lessonColor + '">' + lessonText + "</div>",
-    "</div>"
-  ].join("");
+// Öğrenci: sadece ders adı gösterilir, lessonPreviewClass div'i yok
+function renderLessonHTML(lessonText, lessonColor){
+  return '<div class="lessonPreview">' +
+           '<div class="lessonPreviewLesson" style="color:' + lessonColor + '">' + lessonText + "</div>" +
+         "</div>";
 }
 
 function renderGrid(){
@@ -187,11 +172,8 @@ function renderGrid(){
   grid.style.removeProperty("--portrait-lesson-font");
 
   const appData = loadAppData();
-  const role = appData?.settings?.role || "teacher";
   const isGuest = AppShell.isGuestUser(appData);
-  const active = isGuest
-    ? (appData?.activeDays?.length ? appData.activeDays : [0, 1, 2, 3, 4])
-    : (appData?.activeDays?.length ? appData.activeDays : [0, 1, 2, 3, 4]);
+  const active = appData?.activeDays?.length ? appData.activeDays : [0, 1, 2, 3, 4];
   const daysShown = active.map((index) => ALL_DAYS[index]).filter(Boolean);
 
   let slotCount = 0;
@@ -248,13 +230,11 @@ function renderGrid(){
       if(currentRow){
         const rawLesson = (currentRow.lesson || "").trim();
         const sep = rawLesson.indexOf(" - ");
-        const cls = sep !== -1
-          ? rawLesson.slice(0, sep)
-          : (currentRow.class || "").trim();
+        // Öğrenci: "9A - Matematik" → sadece "Matematik" kısmı alınır
         const lessonName = sep !== -1 ? rawLesson.slice(sep + 3) : rawLesson;
         const lessonText = abbrLessonName(lessonName, portrait);
         const lessonColor = lessonColorOf(appData, rawLesson, currentRow.color);
-        cell.innerHTML = renderLessonHTML(role, cls, lessonText, lessonColor);
+        cell.innerHTML = renderLessonHTML(lessonText, lessonColor);
       }
 
       grid.appendChild(cell);
@@ -279,8 +259,7 @@ if(floatingBack){
       window.history.back();
       return;
     }
-
-    window.location.replace("index.html");
+    window.location.replace("index-student.html");
   });
 }
 </script>

@@ -22,13 +22,9 @@
     <div class="appInner">
       <div id="lessonScreen">
         <div class="title" id="lessonTitle">Ders</div>
-        <div class="plan-title-outside" id="planTitleOutside"><span class="icon">calendar_month</span>Yıllık Plan</div>
-          <div class="card planCard" id="planCard" style="display:flex;flex-direction:column;">
-  <div class="planSwipe" style="flex:1;min-height:0;height:100%;">
-    <div class="swipeWrap" id="planWrap" style="height:100%;"></div>
-  </div>
-  <div class="swipeDots" id="swipeDots"></div>
-</div>
+
+        <!-- Öğrenci: Yıllık Plan kartı ve başlığı DOM'da yok -->
+
         <div class="card" data-type="not">
           <div class="card-head">
             <span class="icon">edit_note</span>
@@ -123,18 +119,6 @@ function getAppData(){
   return AppShell.loadAppData() || {};
 }
 
-function getRole(){
-  return getAppData()?.settings?.role || "teacher";
-}
-
-function applyPlanVisibility(){
-  const isStudent = getRole() === "student";
-  const card  = document.getElementById("planCard");
-  const title = document.getElementById("planTitleOutside");
-  if(card)  card.style.display  = isStudent ? "none" : "flex";
-  if(title) title.style.display = isStudent ? "none" : "";
-}
-
 function isGuest(){
   return AppShell.isGuestUser(getAppData());
 }
@@ -163,18 +147,12 @@ function showRestrictedPrompt(){
   AppShell.showRegisterPrompt("Bu özelliğin tamamını kullanmak için kayıt olun.");
 }
 
+// Öğrenci: "9A - Matematik" → sadece "Matematik" gösterilir
 function setLessonTitle(lesson){
-  const role = getRole();
   const parts = lesson.split(" - ");
   const title = document.getElementById("lessonTitle");
-
   if(!title) return;
-
-  if(role === "student"){
-    title.innerText = parts.length > 1 ? parts[1] : parts[0];
-  }else{
-    title.innerText = parts.length > 1 ? parts[0] + " - " + parts[1] : parts[0];
-  }
+  title.innerText = parts.length > 1 ? parts[1] : parts[0];
 }
 
 let editId = null;
@@ -317,210 +295,11 @@ function save(type){
     button.textContent = "Kaydet";
   });
 }
-let planDataGlobal = {};
 
-// Dersin planPath'ini appData'dan oku ve Firebase'den çek
-async function loadPlanFromFirebase(){
-  const appData = AppShell.loadAppData() || {};
-  const lessons = appData.lessons || [];
-  const params = new URLSearchParams(location.search);
-  const lessonParam = params.get("lesson") || "";
-
-  // Önce tam ders adıyla eşleştir (yeni format: "10/C - KURANI KERİM")
-  // Bulamazsa sadece ders adı kısmıyla dene (eski format geriye dönük uyumluluk)
-  const lessonParamNorm = lessonParam.trim().toLowerCase();
-  let lessonObj = lessons.find(l =>
-    l.name && l.name.trim().toLowerCase() === lessonParamNorm
-  );
-  if(!lessonObj && lessonParam.includes(" - ")){
-    const lessonNameOnly = lessonParam.split(" - ").slice(1).join(" - ").trim().toLowerCase();
-    lessonObj = lessons.find(l =>
-      l.name && l.name.trim().toLowerCase() === lessonNameOnly
-    );
-  }
-
-  const planPath = lessonObj?.planPath || null;
-
-  if(!planPath){
-    // Plan atanmamış — boş kart göster
-    renderSwipe([]);
-    return;
-  }
-
-  try{
-    const { getDatabase, ref, get } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js");
-    const { app } = await import("./assets/js/firebase.js");
-    const db = getDatabase(app);
-    const snapshot = await get(ref(db, "yillik-planlar/" + planPath));
-
-    if(!snapshot.exists()){
-      renderSwipe([]);
-      return;
-    }
-
-    const val = snapshot.val();
-    // Yeni yapı: {ad: "...", plan: [...]}
-    // Eski yapı: direkt array
-    let planArr;
-    if(val && val.plan){
-      planArr = Array.isArray(val.plan) ? val.plan : Object.values(val.plan);
-    } else {
-      planArr = Array.isArray(val) ? val : Object.values(val);
-    }
-    planDataGlobal = planArr;
-    renderSwipe(planArr);
-  }catch(err){
-    console.error("Plan yükleme hatası:", err);
-    renderSwipe([]);
-  }
-}
-
-loadPlanFromFirebase();
-
-// Alan isimlerini güzel Türkçe başlığa çevirir
-function formatFieldLabel(key) {
-  const labels = {
-    unite:               "Ünite",
-    unite_tema:          "Ünite / Tema",
-    konu:                "Konu",
-    konu_icerik_cercevesi: "Konu / İçerik Çerçevesi",
-    kazanim:             "Kazanım",
-    kazanim_aciklamasi:  "Kazanım Açıklaması",
-    ogrenme_ciktilari:   "Öğrenme Çıktıları",
-    surec_bilesenleri:   "Süreç Bileşenleri",
-    aciklama:            "Açıklama",
-  };
-  if(labels[key]) return labels[key];
-  return key.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
-}
-
-function renderSwipe(data) {
-  const wrap = document.getElementById("planWrap");
-  if(!wrap) return;
-  wrap.innerHTML = "";
-
-  const FIELD_ORDER = [
-    "unite",
-    "unite_tema",
-    "konu",
-    "konu_icerik_cercevesi",
-    "kazanim",
-    "kazanim_aciklamasi",
-    "ogrenme_ciktilari",
-    "surec_bilesenleri",
-    "aciklama",
-  ];
-
-  const filtered = data.filter(item =>
-    item.belirli_gun_ve_haftalar !== "BELİRLİ GÜN VE HAFTALAR"
-  );
-
-  filtered.forEach(item => {
-    const knownKeys = FIELD_ORDER.filter(k => k in item);
-    const unknownKeys = Object.keys(item).filter(k => k !== "hafta" && !FIELD_ORDER.includes(k));
-    const orderedKeys = [...knownKeys, ...unknownKeys];
-
-    const bodyHtml = orderedKeys
-      .map(key =>
-        `<span class="spLabel">${formatFieldLabel(key)}</span>` +
-        `<span class="spValue">${item[key] || "-"}</span>`
-      ).join("");
-
-    const card = `
-      <div class="spCard">
-        <div class="spHeader">${item.hafta || ""}</div>
-        <div class="spBody">${bodyHtml}</div>
-      </div>
-    `;
-    wrap.innerHTML += card;
-  });
-
-  // Nokta indikatörler
-  const dotsEl = document.getElementById("swipeDots");
-  const planSwipe = document.querySelector(".planSwipe");
-  if (dotsEl && filtered.length > 1) {
-    dotsEl.innerHTML = filtered.map((_, i) =>
-      `<div class="swipeDot${i === 0 ? " active" : ""}" data-i="${i}"></div>`
-    ).join("");
-    if (planSwipe) {
-      planSwipe.addEventListener("scroll", function() {
-        const cards = wrap.querySelectorAll(".spCard");
-        const cw = cards[0] ? cards[0].offsetWidth : planSwipe.offsetWidth;
-        const idx = Math.round(planSwipe.scrollLeft / cw);
-        dotsEl.querySelectorAll(".swipeDot").forEach((d, i) => {
-          d.classList.toggle("active", i === idx);
-        });
-      }, { passive: true });
-    }
-  }
-
-  // Bulunulan haftaya scroll et
-  scrollToCurrentWeek(filtered);
-}
-
-function scrollToCurrentWeek(data) {
-  const planSwipe = document.querySelector(".planSwipe");
-  const wrap = document.getElementById("planWrap");
-  if (!planSwipe || !wrap) return;
-
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  // Eylül başlangıcını baz al (Eylül-Aralık = bu yıl, Ocak-Haziran = geçen yılın eylülü)
-  const sepYear = today.getMonth() >= 8 ? today.getFullYear() : today.getFullYear() - 1;
-
-  const months = {
-    "ocak": 1, "şubat": 2, "mart": 3, "nisan": 4, "mayıs": 5, "haziran": 6,
-    "temmuz": 7, "ağustos": 8, "eylül": 9, "ekim": 10, "kasım": 11, "aralık": 12
-  };
-
-  let currentIdx = 0;
-  let found = false;
-
-  data.forEach((item, i) => {
-    // Örn: "1. Hafta: 8-12 Eylül" veya "14. Hafta: 6-10 Ocak"
-    const match = (item.hafta || "").match(/(\d+)[^-\d]*-\s*(\d+)\s*([A-Za-zÇçĞğİıÖöŞşÜü]+)/);
-    if (!match) return;
-
-    const startDay = parseInt(match[1]);
-    const endDay   = parseInt(match[2]);
-    const monthStr = match[3].toLowerCase();
-    const monthNum = months[monthStr];
-    if (!monthNum) return;
-
-    // Eylül-Aralık = sepYear, Ocak-Ağustos = sepYear+1
-    const year = monthNum >= 9 ? sepYear : sepYear + 1;
-
-    const weekStart = new Date(year, monthNum - 1, startDay);
-    weekStart.setHours(0, 0, 0, 0);
-    const weekEnd = new Date(year, monthNum - 1, endDay);
-    weekEnd.setHours(23, 59, 59, 999);
-
-    if (today >= weekStart && today <= weekEnd) {
-      currentIdx = i;
-      found = true;
-    } else if (!found && today > weekEnd) {
-      // Henüz eşleşme yok ama bu hafta geçmişte — en son geçmiş haftayı tut
-      currentIdx = i;
-    }
-  });
-
-  // Nokta indikatörünü güncelle
-  const dotsEl = document.getElementById("swipeDots");
-  if (dotsEl) {
-    dotsEl.querySelectorAll(".swipeDot").forEach((d, i) => {
-      d.classList.toggle("active", i === currentIdx);
-    });
-  }
-
-  // Karta scroll et (DOM render tamamlandıktan sonra)
-  requestAnimationFrame(() => {
-    const cards = wrap.querySelectorAll(".spCard");
-    if (cards[currentIdx]) {
-      const cardWidth = cards[currentIdx].offsetWidth;
-      planSwipe.scrollLeft = currentIdx * cardWidth;
-    }
-  });
+// Öğrenci: loadPlanFromFirebase çağrılmaz, plan kartı HTML'de yok
+// Bu fonksiyon sadece edit() içindeki çağrı için stub olarak bırakılır
+function loadPlanFromFirebase(){
+  // Öğrenci görünümünde yıllık plan gösterilmez
 }
 
 function render(){
@@ -568,14 +347,13 @@ function render(){
 function updateDots(){
   ["not", "odev", "sinav"].forEach(function(type){
     const list = document.getElementById(type + "List");
-    const dot  = document.getElementById(type + "Dot");
+    const dot = document.getElementById(type + "Dot");
     if(!dot) return;
     dot.classList.toggle("hasDot", !!(list && list.children.length > 0));
   });
 }
 
 function renderAll(){
-  const role = getRole();
   const dataset = data();
   const box = document.getElementById("allNotes");
   box.innerHTML = "";
@@ -616,16 +394,12 @@ function renderAll(){
     lessonCard.className = "card";
 
     const parts = lessonKey.split(" - ");
-    const cls = parts[1] ? parts[0] : "";
-    const les = parts[1] ? parts[1] : parts[0];
+    // Öğrenci: sadece ders adı gösterilir, sınıf kısmı atılır
+    const les = parts.length > 1 ? parts.slice(1).join(" - ") : parts[0];
 
     lessonCard.innerHTML = [
       '<div class="card-head lesson-head">',
-      role === "student"
-        ? '<span class="les">' + les + "</span>"
-        : parts.length > 1
-          ? '<span class="cls">' + cls + '</span> - <span class="les">' + les + "</span>"
-          : '<span class="les">' + les + "</span>",
+      '<span class="les">' + les + "</span>",
       '<span class="arrow">&#9662;</span>',
       "</div>",
       '<div class="accordion lesson-acc"></div>'
@@ -728,7 +502,7 @@ function edit(id){
     setLessonTitle(note.lesson);
     document.getElementById("notText").value = note.text;
     render();
-    loadPlanFromFirebase();
+    loadPlanFromFirebase(); // stub — öğrencide plan yüklenmez
     requestAnimationFrame(() => openCard("not"));
   }
 
@@ -783,7 +557,7 @@ if(mode === "list"){
 }
 
 applyAccessState();
-applyPlanVisibility();
+
 if(accessLocked && mode !== "list"){
   showRestrictedPrompt();
 }
@@ -809,25 +583,19 @@ document.addEventListener("click", function(event){
 
   card.classList.toggle("open");
   arrow?.classList.toggle("open");
-  if (card.classList.contains("open")) {
-  setTimeout(() => {
-    const nav = document.querySelector(".nav");
-    const navHeight = nav ? nav.offsetHeight : 80;
 
-    const rect = card.getBoundingClientRect();
-    const bottomSpace = window.innerHeight - rect.bottom;
-
-    // Eğer kartın altı nav'ın altına giriyorsa kaydır
-    if (bottomSpace < navHeight + 10) {
-      const scrollAmount = (navHeight + 20) - bottomSpace;
-
-      window.scrollBy({
-        top: scrollAmount,
-        behavior: "smooth"
-      });
-    }
-  }, 200);
-}
+  if(card.classList.contains("open")){
+    setTimeout(() => {
+      const nav = document.querySelector(".nav");
+      const navHeight = nav ? nav.offsetHeight : 80;
+      const rect = card.getBoundingClientRect();
+      const bottomSpace = window.innerHeight - rect.bottom;
+      if(bottomSpace < navHeight + 10){
+        const scrollAmount = (navHeight + 20) - bottomSpace;
+        window.scrollBy({ top: scrollAmount, behavior: "smooth" });
+      }
+    }, 200);
+  }
 });
 </script>
 </body>

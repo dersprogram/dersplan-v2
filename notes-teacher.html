@@ -1,0 +1,792 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>Notlar</title>
+<script type="module" src="assets/js/firebase.js?v=20260409-2"></script>
+<script src="assets/js/app-shell.js?v=20260409-2"></script>
+<script type="module" src="assets/js/auth.js?v=20260409-2"></script>
+<link rel="stylesheet" href="assets/css/tokens.css?v=20260409-2">
+<link rel="stylesheet" href="assets/css/base.css?v=20260409-2">
+<link rel="stylesheet" href="assets/css/components.css?v=20260409-2">
+<link rel="stylesheet" href="assets/css/pages/notes.css?v=20260409-2">
+<link rel="stylesheet" href="assets/css/pages/swipe.css">
+</head>
+<body>
+<div class="appFrame">
+  <div class="appBorder">
+    <div class="appInner">
+      <div id="lessonScreen">
+        <div class="title" id="lessonTitle">Ders</div>
+
+        <!-- Öğretmen: Yıllık Plan kartı her zaman görünür -->
+        <div class="plan-title-outside" id="planTitleOutside">
+          <span class="icon">calendar_month</span>Yıllık Plan
+        </div>
+        <div class="card planCard" id="planCard" style="display:flex;flex-direction:column;">
+          <div class="planSwipe" style="flex:1;min-height:0;height:100%;">
+            <div class="swipeWrap" id="planWrap" style="height:100%;"></div>
+          </div>
+          <div class="swipeDots" id="swipeDots"></div>
+        </div>
+
+        <div class="card" data-type="not">
+          <div class="card-head">
+            <span class="icon">edit_note</span>
+            Not
+            <span class="card-head-right"><span class="cardNoteDot" id="notDot"></span><span class="arrow">&#9662;</span></span>
+          </div>
+          <div class="accordion">
+            <textarea id="notText"></textarea>
+            <button onclick="save('not')">Kaydet</button>
+            <div class="list" id="notList"></div>
+          </div>
+        </div>
+
+        <div class="card" data-type="odev">
+          <div class="card-head">
+            <span class="icon">edit_note</span>
+            Ödev
+            <span class="card-head-right"><span class="cardNoteDot" id="odevDot"></span><span class="arrow">&#9662;</span></span>
+          </div>
+          <div class="accordion">
+            <textarea id="odevText"></textarea>
+            <button onclick="save('odev')">Kaydet</button>
+            <div class="list" id="odevList"></div>
+          </div>
+        </div>
+
+        <div class="card" data-type="sinav">
+          <div class="card-head">
+            <span class="icon">edit_note</span>
+            Sınav
+            <span class="card-head-right"><span class="cardNoteDot" id="sinavDot"></span><span class="arrow">&#9662;</span></span>
+          </div>
+          <div class="accordion">
+            <div class="dateWrap">
+              <input type="date" id="sinavDate">
+              <span class="dateIcon icon">event</span>
+            </div>
+            <textarea id="sinavText"></textarea>
+            <button onclick="save('sinav')">Kaydet</button>
+            <div class="list" id="sinavList"></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="dayScreen" class="hidden">
+        <div class="title" id="dayTitle">Gün</div>
+        <div class="card" data-type="day">
+          <div class="card-head">
+            GUN NOTU
+            <span class="arrow">&#9662;</span>
+          </div>
+          <div class="accordion">
+            <textarea id="dayText"></textarea>
+            <button onclick="save('day')">Kaydet</button>
+          </div>
+          <div class="list" id="dayList"></div>
+        </div>
+      </div>
+
+      <div id="listScreen" class="hidden">
+        <div class="pageTitle">
+          <span class="icon">edit_note</span>
+          NOTLARIM
+        </div>
+        <div id="allNotes"></div>
+      </div>
+    </div>
+
+    <div class="nav">
+      <div class="navItem" data-nav="index">
+        <span class="icon">today</span>
+        GÜNLÜK
+      </div>
+      <div class="navItem" data-nav="weekly">
+        <span class="icon">view_week</span>
+        HAFTALIK
+      </div>
+      <div class="navItem" data-nav="notes">
+        <span class="icon">edit_note</span>
+        NOTLAR
+      </div>
+      <div class="navItem" data-nav="settings">
+        <span class="icon">settings</span>
+        AYARLAR
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function getAppData(){
+  return AppShell.loadAppData() || {};
+}
+
+function isGuest(){
+  return AppShell.isGuestUser(getAppData());
+}
+
+function getTodayDayName(){
+  return AppShell.getTodayDayName();
+}
+
+function getRequestedDay(){
+  const params = new URLSearchParams(location.search);
+  if(params.get("day")) return params.get("day");
+  const lesson = params.get("lesson") || "";
+  if(lesson.startsWith("__DAY__-")){
+    return lesson.replace("__DAY__-", "");
+  }
+  return "";
+}
+
+function isRestrictedAccess(dayName){
+  if(!isGuest()) return false;
+  if(!dayName) return false;
+  return dayName !== getTodayDayName();
+}
+
+function showRestrictedPrompt(){
+  AppShell.showRegisterPrompt("Bu özelliğin tamamını kullanmak için kayıt olun.");
+}
+
+// Öğretmen: "9A - Matematik" → tam ad olarak gösterilir
+function setLessonTitle(lesson){
+  const parts = lesson.split(" - ");
+  const title = document.getElementById("lessonTitle");
+  if(!title) return;
+  title.innerText = parts.length > 1 ? parts[0] + " - " + parts[1] : parts[0];
+}
+
+let editId = null;
+let editFromList = false;
+let currentDay = null;
+let lastEditType = null;
+let accessLocked = false;
+const KEY = "app_notes";
+
+function data(){
+  return AppShell.safeJsonParse(localStorage.getItem(KEY), []) || [];
+}
+
+function saveData(dataset){
+  try{
+    localStorage.setItem(KEY, JSON.stringify(dataset));
+  }catch(error){
+    console.warn("NOTE STORAGE FAIL", error);
+  }
+  editId = null;
+}
+
+function showScreen(name){
+  document.getElementById("lessonScreen").classList.add("hidden");
+  document.getElementById("dayScreen").classList.add("hidden");
+  document.getElementById("listScreen").classList.add("hidden");
+  document.getElementById(name).classList.remove("hidden");
+}
+
+function applyAccessState(){
+  const fields = document.querySelectorAll("#lessonScreen textarea, #lessonScreen input, #dayScreen textarea, #dayScreen input");
+  const buttons = document.querySelectorAll("#lessonScreen button, #dayScreen button");
+  const heads = document.querySelectorAll("#lessonScreen .card-head, #dayScreen .card-head");
+
+  fields.forEach((field) => {
+    field.disabled = accessLocked;
+  });
+
+  buttons.forEach((button) => {
+    button.disabled = accessLocked;
+    button.style.opacity = accessLocked ? ".55" : "1";
+  });
+
+  heads.forEach((head) => {
+    head.style.opacity = accessLocked ? ".65" : "1";
+  });
+}
+
+const params = new URLSearchParams(location.search);
+const lesson = params.get("lesson");
+const mode = params.get("mode") || (!lesson ? "list" : null);
+const requestedDay = getRequestedDay();
+accessLocked = isRestrictedAccess(requestedDay);
+
+if(mode === "list"){
+  showScreen("listScreen");
+}else if(lesson && lesson.startsWith("__DAY__")){
+  currentDay = lesson.replace("__DAY__-", "");
+  showScreen("dayScreen");
+  document.getElementById("dayTitle").textContent = currentDay;
+}else{
+  showScreen("lessonScreen");
+  if(lesson){
+    setLessonTitle(lesson);
+  }
+}
+
+function save(type){
+  if(accessLocked){
+    showRestrictedPrompt();
+    return;
+  }
+
+  const search = new URLSearchParams(location.search);
+  const lessonKey = search.get("lesson");
+  const sourceDay = search.get("day") || currentDay || "";
+
+  let text = "";
+  let date = "";
+
+  if(type === "not") text = document.getElementById("notText").value;
+  if(type === "odev") text = document.getElementById("odevText").value;
+
+  if(type === "sinav"){
+    text = document.getElementById("sinavText").value;
+    date = document.getElementById("sinavDate").value;
+  }
+
+  if(type === "day") text = document.getElementById("dayText").value;
+  if(!text && !date) return;
+
+  const dataset = data() || [];
+  let updatedId = editId;
+
+  if(editId){
+    const item = dataset.find((entry) => entry.id === editId);
+    if(item){
+      item.text = text;
+      item.date = date;
+    }
+  }else{
+    updatedId = Date.now();
+    dataset.push({
+      id: updatedId,
+      type,
+      lesson: lessonKey,
+      text,
+      date,
+      day: new Date().toLocaleDateString("tr-TR"),
+      dayName: currentDay,
+      sourceDay
+    });
+  }
+
+  saveData(dataset);
+  render();
+  renderAll();
+  editFromList = false;
+  editId = null;
+
+  document.getElementById("notText").value = "";
+  document.getElementById("odevText").value = "";
+  document.getElementById("sinavText").value = "";
+  document.getElementById("sinavDate").value = "";
+  document.getElementById("dayText").value = "";
+
+  setTimeout(() => {
+    const item = document.querySelector('[data-id="' + updatedId + '"]');
+    if(item){
+      document.querySelectorAll(".item").forEach((entry) => entry.classList.remove("active"));
+      item.classList.add("active");
+      item.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, 60);
+
+  document.querySelectorAll("#lessonScreen button").forEach((button) => {
+    button.textContent = "Kaydet";
+  });
+  document.querySelectorAll("#dayScreen button").forEach((button) => {
+    button.textContent = "Kaydet";
+  });
+}
+
+let planDataGlobal = {};
+
+// Öğretmen: planPath Firebase'den çekilir ve swipe kartı gösterilir
+async function loadPlanFromFirebase(){
+  const appData = AppShell.loadAppData() || {};
+  const lessons = appData.lessons || [];
+  const params = new URLSearchParams(location.search);
+  const lessonParam = params.get("lesson") || "";
+
+  const lessonParamNorm = lessonParam.trim().toLowerCase();
+  let lessonObj = lessons.find(l =>
+    l.name && l.name.trim().toLowerCase() === lessonParamNorm
+  );
+  if(!lessonObj && lessonParam.includes(" - ")){
+    const lessonNameOnly = lessonParam.split(" - ").slice(1).join(" - ").trim().toLowerCase();
+    lessonObj = lessons.find(l =>
+      l.name && l.name.trim().toLowerCase() === lessonNameOnly
+    );
+  }
+
+  const planPath = lessonObj?.planPath || null;
+
+  if(!planPath){
+    renderSwipe([]);
+    return;
+  }
+
+  try{
+    const { getDatabase, ref, get } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js");
+    const { app } = await import("./assets/js/firebase.js");
+    const db = getDatabase(app);
+    const snapshot = await get(ref(db, "yillik-planlar/" + planPath));
+
+    if(!snapshot.exists()){
+      renderSwipe([]);
+      return;
+    }
+
+    const val = snapshot.val();
+    let planArr;
+    if(val && val.plan){
+      planArr = Array.isArray(val.plan) ? val.plan : Object.values(val.plan);
+    }else{
+      planArr = Array.isArray(val) ? val : Object.values(val);
+    }
+    planDataGlobal = planArr;
+    renderSwipe(planArr);
+  }catch(err){
+    console.error("Plan yükleme hatası:", err);
+    renderSwipe([]);
+  }
+}
+
+loadPlanFromFirebase();
+
+function formatFieldLabel(key){
+  const labels = {
+    unite:               "Ünite",
+    unite_tema:          "Ünite / Tema",
+    konu:                "Konu",
+    konu_icerik_cercevesi: "Konu / İçerik Çerçevesi",
+    kazanim:             "Kazanım",
+    kazanim_aciklamasi:  "Kazanım Açıklaması",
+    ogrenme_ciktilari:   "Öğrenme Çıktıları",
+    surec_bilesenleri:   "Süreç Bileşenleri",
+    aciklama:            "Açıklama",
+  };
+  if(labels[key]) return labels[key];
+  return key.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+}
+
+function renderSwipe(data){
+  const wrap = document.getElementById("planWrap");
+  if(!wrap) return;
+  wrap.innerHTML = "";
+
+  const FIELD_ORDER = [
+    "unite", "unite_tema", "konu", "konu_icerik_cercevesi",
+    "kazanim", "kazanim_aciklamasi", "ogrenme_ciktilari",
+    "surec_bilesenleri", "aciklama",
+  ];
+
+  const filtered = data.filter(item =>
+    item.belirli_gun_ve_haftalar !== "BELİRLİ GÜN VE HAFTALAR"
+  );
+
+  filtered.forEach(item => {
+    const knownKeys = FIELD_ORDER.filter(k => k in item);
+    const unknownKeys = Object.keys(item).filter(k => k !== "hafta" && !FIELD_ORDER.includes(k));
+    const orderedKeys = [...knownKeys, ...unknownKeys];
+
+    const bodyHtml = orderedKeys
+      .map(key =>
+        `<span class="spLabel">${formatFieldLabel(key)}</span>` +
+        `<span class="spValue">${item[key] || "-"}</span>`
+      ).join("");
+
+    const card = `
+      <div class="spCard">
+        <div class="spHeader">${item.hafta || ""}</div>
+        <div class="spBody">${bodyHtml}</div>
+      </div>
+    `;
+    wrap.innerHTML += card;
+  });
+
+  const dotsEl = document.getElementById("swipeDots");
+  const planSwipe = document.querySelector(".planSwipe");
+  if(dotsEl && filtered.length > 1){
+    dotsEl.innerHTML = filtered.map((_, i) =>
+      `<div class="swipeDot${i === 0 ? " active" : ""}" data-i="${i}"></div>`
+    ).join("");
+    if(planSwipe){
+      planSwipe.addEventListener("scroll", function(){
+        const cards = wrap.querySelectorAll(".spCard");
+        const cw = cards[0] ? cards[0].offsetWidth : planSwipe.offsetWidth;
+        const idx = Math.round(planSwipe.scrollLeft / cw);
+        dotsEl.querySelectorAll(".swipeDot").forEach((d, i) => {
+          d.classList.toggle("active", i === idx);
+        });
+      }, { passive: true });
+    }
+  }
+
+  scrollToCurrentWeek(filtered);
+}
+
+function scrollToCurrentWeek(data){
+  const planSwipe = document.querySelector(".planSwipe");
+  const wrap = document.getElementById("planWrap");
+  if(!planSwipe || !wrap) return;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const sepYear = today.getMonth() >= 8 ? today.getFullYear() : today.getFullYear() - 1;
+  const months = {
+    "ocak": 1, "şubat": 2, "mart": 3, "nisan": 4, "mayıs": 5, "haziran": 6,
+    "temmuz": 7, "ağustos": 8, "eylül": 9, "ekim": 10, "kasım": 11, "aralık": 12
+  };
+
+  let currentIdx = 0;
+  let found = false;
+
+  data.forEach((item, i) => {
+    const match = (item.hafta || "").match(/(\d+)[^-\d]*-\s*(\d+)\s*([A-Za-zÇçĞğİıÖöŞşÜü]+)/);
+    if(!match) return;
+
+    const startDay = parseInt(match[1]);
+    const endDay = parseInt(match[2]);
+    const monthStr = match[3].toLowerCase();
+    const monthNum = months[monthStr];
+    if(!monthNum) return;
+
+    const year = monthNum >= 9 ? sepYear : sepYear + 1;
+    const weekStart = new Date(year, monthNum - 1, startDay);
+    weekStart.setHours(0, 0, 0, 0);
+    const weekEnd = new Date(year, monthNum - 1, endDay);
+    weekEnd.setHours(23, 59, 59, 999);
+
+    if(today >= weekStart && today <= weekEnd){
+      currentIdx = i;
+      found = true;
+    }else if(!found && today > weekEnd){
+      currentIdx = i;
+    }
+  });
+
+  const dotsEl = document.getElementById("swipeDots");
+  if(dotsEl){
+    dotsEl.querySelectorAll(".swipeDot").forEach((d, i) => {
+      d.classList.toggle("active", i === currentIdx);
+    });
+  }
+
+  requestAnimationFrame(() => {
+    const cards = wrap.querySelectorAll(".spCard");
+    if(cards[currentIdx]){
+      const cardWidth = cards[currentIdx].offsetWidth;
+      planSwipe.scrollLeft = currentIdx * cardWidth;
+    }
+  });
+}
+
+function render(){
+  const dataset = data() || [];
+  const currentLesson = new URLSearchParams(location.search).get("lesson");
+
+  ["not", "odev", "sinav", "day"].forEach((type) => {
+    const list = document.getElementById(type + "List");
+    if(!list) return;
+
+    list.innerHTML = "";
+
+    dataset
+      .filter((entry) =>
+        entry.type === type &&
+        (type !== "day" || entry.dayName === currentDay) &&
+        (type === "day" || entry.lesson === currentLesson)
+      )
+      .forEach((entry) => {
+        const div = document.createElement("div");
+        div.className = "item";
+        div.dataset.id = entry.id;
+
+        let text = entry.text;
+        if(entry.type === "sinav" && entry.date){
+          text = entry.date + " - " + entry.text;
+        }
+
+        div.innerHTML = [
+          '<div class="item-text">' + text + "</div>",
+          '<div class="icons">',
+          '<span class="cardIcon editIcon" onclick="event.stopPropagation(); edit(' + entry.id + ')"></span>',
+          '<span class="cardIcon deleteIcon" onclick="event.stopPropagation(); del(this,' + entry.id + ')"></span>',
+          "</div>",
+          "</div>"
+        ].join("");
+
+        list.appendChild(div);
+      });
+  });
+
+  updateDots();
+}
+
+function updateDots(){
+  ["not", "odev", "sinav"].forEach(function(type){
+    const list = document.getElementById(type + "List");
+    const dot = document.getElementById(type + "Dot");
+    if(!dot) return;
+    dot.classList.toggle("hasDot", !!(list && list.children.length > 0));
+  });
+}
+
+function renderAll(){
+  const dataset = data();
+  const box = document.getElementById("allNotes");
+  box.innerHTML = "";
+
+  const dayNotes = dataset.filter((entry) => entry.type === "day");
+  if(dayNotes.length){
+    const dayCard = document.createElement("div");
+    dayCard.className = "card";
+    dayCard.innerHTML = [
+      '<div class="card-head day-head">GÜN NOTLARI<span class="arrow">&#9662;</span></div>',
+      '<div class="accordion day-acc"></div>'
+    ].join("");
+    box.appendChild(dayCard);
+
+    const acc = dayCard.querySelector(".day-acc");
+    acc.innerHTML = dayNotes.map((entry) => [
+      '<div class="item" data-id="' + entry.id + '">',
+      '<div class="item-text day-note-text"><span class="day-note-badge">' + (entry.dayName || entry.day) + '</span><span class="day-note-content">' + entry.text + "</span></div>",
+      '<div class="icons">',
+      '<span class="cardIcon editIcon" onclick="event.stopPropagation(); edit(' + entry.id + ')"></span>',
+      '<span class="cardIcon deleteIcon" onclick="event.stopPropagation(); del(this,' + entry.id + ')"></span>',
+      "</div>",
+      "</div>"
+    ].join("")).join("");
+  }
+
+  const lessonGroups = {};
+  dataset.forEach((entry) => {
+    if(entry.type === "day") return;
+    if(!lessonGroups[entry.lesson]){
+      lessonGroups[entry.lesson] = { not: [], odev: [], sinav: [] };
+    }
+    lessonGroups[entry.lesson][entry.type].push(entry);
+  });
+
+  Object.keys(lessonGroups).forEach((lessonKey) => {
+    const lessonCard = document.createElement("div");
+    lessonCard.className = "card";
+
+    const parts = lessonKey.split(" - ");
+    const cls = parts[1] ? parts[0] : "";
+    const les = parts[1] ? parts[1] : parts[0];
+
+    // Öğretmen: "9A - Matematik" formatında tam ad gösterilir
+    lessonCard.innerHTML = [
+      '<div class="card-head lesson-head">',
+      parts.length > 1
+        ? '<span class="cls">' + cls + '</span> - <span class="les">' + les + "</span>"
+        : '<span class="les">' + les + "</span>",
+      '<span class="arrow">&#9662;</span>',
+      "</div>",
+      '<div class="accordion lesson-acc"></div>'
+    ].join("");
+
+    box.appendChild(lessonCard);
+    const acc = lessonCard.querySelector(".lesson-acc");
+
+    ["not", "odev", "sinav"].forEach((type) => {
+      const entries = lessonGroups[lessonKey][type];
+      if(!entries.length) return;
+
+      const subCard = document.createElement("div");
+      subCard.className = "card";
+      let html = '<div class="badge ' + type + '">' + type.toUpperCase() + "</div>";
+
+      entries.forEach((entry) => {
+        let text = entry.text;
+        if(entry.type === "sinav" && entry.date){
+          text = entry.date + " - " + entry.text;
+        }
+
+        html += [
+          '<div class="item">',
+          '<div class="item-text">' + text + "</div>",
+          '<div class="icons">',
+          '<span class="cardIcon editIcon" onclick="event.stopPropagation(); edit(' + entry.id + ')"></span>',
+          '<span class="cardIcon deleteIcon" onclick="event.stopPropagation(); del(this,' + entry.id + ')"></span>',
+          "</div>",
+          "</div>"
+        ].join("");
+      });
+
+      subCard.innerHTML = html;
+      acc.appendChild(subCard);
+    });
+  });
+
+  document.querySelectorAll("#allNotes .item").forEach((div) => {
+    div.addEventListener("click", function(){
+      document.querySelectorAll("#allNotes .item").forEach((item) => item.classList.remove("active"));
+      div.classList.add("active");
+    });
+  });
+}
+
+let timers = {};
+
+function openCard(type){
+  const card = document.querySelector('#lessonScreen .card[data-type="' + type + '"]');
+  if(!card) return;
+  card.classList.add("open");
+  card.querySelector(".arrow")?.classList.add("open");
+  const button = card.querySelector("button");
+  if(button) button.textContent = "Güncelle";
+}
+
+function openDayCard(){
+  const card = document.querySelector("#dayScreen .card");
+  if(!card) return;
+  card.classList.add("open");
+  card.querySelector(".arrow")?.classList.add("open");
+  const button = card.querySelector("button");
+  if(button) button.textContent = "Güncelle";
+}
+
+function edit(id){
+  editFromList = true;
+  lastEditType = null;
+
+  document.querySelectorAll("#lessonScreen .card").forEach((card) => {
+    card.classList.remove("open");
+    card.querySelector(".arrow")?.classList.remove("open");
+  });
+
+  const dataset = data();
+  const note = dataset.find((entry) => entry.id === id);
+  if(!note) return;
+  if(isRestrictedAccess(note.sourceDay || note.dayName)){
+    showRestrictedPrompt();
+    return;
+  }
+
+  editId = id;
+
+  if(note.type === "day"){
+    lastEditType = "day";
+    currentDay = note.dayName;
+    history.replaceState(null, "", "?lesson=" + encodeURIComponent(note.lesson));
+    showScreen("dayScreen");
+    document.getElementById("dayTitle").textContent = note.dayName || note.day;
+    document.getElementById("dayText").value = note.text;
+    requestAnimationFrame(openDayCard);
+  }
+
+  if(note.type === "not"){
+    lastEditType = "not";
+    history.replaceState(null, "", "?lesson=" + encodeURIComponent(note.lesson));
+    showScreen("lessonScreen");
+    setLessonTitle(note.lesson);
+    document.getElementById("notText").value = note.text;
+    render();
+    loadPlanFromFirebase();
+    requestAnimationFrame(() => openCard("not"));
+  }
+
+  if(note.type === "odev"){
+    lastEditType = "odev";
+    history.replaceState(null, "", "?lesson=" + encodeURIComponent(note.lesson));
+    showScreen("lessonScreen");
+    setLessonTitle(note.lesson);
+    document.getElementById("odevText").value = note.text;
+    render();
+    loadPlanFromFirebase();
+    requestAnimationFrame(() => openCard("odev"));
+  }
+
+  if(note.type === "sinav"){
+    lastEditType = "sinav";
+    history.replaceState(null, "", "?lesson=" + encodeURIComponent(note.lesson));
+    showScreen("lessonScreen");
+    setLessonTitle(note.lesson);
+    document.getElementById("sinavText").value = note.text;
+    document.getElementById("sinavDate").value = note.date;
+    render();
+    loadPlanFromFirebase();
+    requestAnimationFrame(() => openCard("sinav"));
+  }
+}
+
+function del(element, id){
+  const note = data().find((entry) => entry.id === id);
+  if(note && isRestrictedAccess(note.sourceDay || note.dayName)){
+    showRestrictedPrompt();
+    return;
+  }
+
+  if(!element.classList.contains("confirm")){
+    element.classList.add("confirm");
+    timers[id] = setTimeout(() => {
+      element.classList.remove("confirm");
+    }, 3000);
+    return;
+  }
+
+  const dataset = data().filter((entry) => entry.id !== id);
+  saveData(dataset);
+  render();
+  renderAll();
+}
+
+render();
+if(mode === "list"){
+  renderAll();
+}
+
+applyAccessState();
+
+if(accessLocked && mode !== "list"){
+  showRestrictedPrompt();
+}
+
+document.addEventListener("click", function(event){
+  const head = event.target.closest(".card-head");
+  if(!head) return;
+  if(accessLocked && head.closest("#lessonScreen, #dayScreen")){
+    showRestrictedPrompt();
+    return;
+  }
+
+  const card = head.parentElement;
+  const arrow = head.querySelector(".arrow");
+  const group = card.parentElement;
+
+  group.querySelectorAll(":scope > .card").forEach((entry) => {
+    if(entry !== card){
+      entry.classList.remove("open");
+      entry.querySelector(".arrow")?.classList.remove("open");
+    }
+  });
+
+  card.classList.toggle("open");
+  arrow?.classList.toggle("open");
+
+  if(card.classList.contains("open")){
+    setTimeout(() => {
+      const nav = document.querySelector(".nav");
+      const navHeight = nav ? nav.offsetHeight : 80;
+      const rect = card.getBoundingClientRect();
+      const bottomSpace = window.innerHeight - rect.bottom;
+      if(bottomSpace < navHeight + 10){
+        const scrollAmount = (navHeight + 20) - bottomSpace;
+        window.scrollBy({ top: scrollAmount, behavior: "smooth" });
+      }
+    }, 200);
+  }
+});
+</script>
+</body>
+</html>

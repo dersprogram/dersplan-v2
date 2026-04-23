@@ -13,11 +13,11 @@
 <link rel="stylesheet" href="assets/css/tokens.css?v=20260409-2">
 <link rel="stylesheet" href="assets/css/base.css?v=20260409-2">
 <link rel="stylesheet" href="assets/css/components.css?v=20260409-2">
-<link rel="stylesheet" href="assets/css/pages/home.css?v=20260409-2">
+<link rel="stylesheet" href="assets/css/pages/home-student.css?v=20260409-2">
 <link rel="icon" href="icons/icon-192.png" />
-
 </head>
 <body>
+  <!-- Öğrenci: sınıf sütunu gizlenir, body sınıfı sayfada her zaman aktif -->
   <div class="appFrame">
     <div class="appBorder">
       <div class="appInner">
@@ -32,6 +32,7 @@
             <span class="orange">TAKIP</span>
           </div>
 
+          <!-- Öğrenci: hangi sınıfta olduğu burada gösterilir -->
           <div id="studentInfo" class="studentInfo"></div>
 
           <div class="daysWrap">
@@ -94,62 +95,50 @@
     lastColor: "#ff7a00"
   };
 
-  const role = appData.settings?.role || "teacher";
+  // Öğrenci rolü — sabit, koşullu dal yok
   const isGuest = AppShell.isGuestUser(appData);
   const todayName = AppShell.getTodayDayName();
   const studentClass = appData.settings?.studentClass || "";
   const bar = document.querySelector(".daysScroll");
 
-  if(role === "student"){
-    document.body.classList.add("hideClassColumn");
-    const info = document.getElementById("studentInfo");
-    if(info){
-      info.textContent = studentClass || "";
-    }
+  // Öğrenci: sınıf sütunu body sınıfıyla gizlenir
+  document.body.classList.add("hideClassColumn");
+
+  // Öğrenci sınıf adını üst bilgide göster
+  const info = document.getElementById("studentInfo");
+  if(info){
+    info.textContent = studentClass || "";
   }
 
-  function buildLessonKey(className, lessonName){
+  // Öğrenci: "9A - Matematik" → sadece "Matematik" kısmı alınır
+  function buildLessonKey(lessonName){
     const lesson = String(lessonName || "").trim();
     if(!lesson || lesson === "-") return lesson || "-";
-    if(role === "student"){
-      const parts = lesson.split(" - ");
-      return parts.length > 1 ? parts.slice(1).join(" - ") : lesson;
-    }
+    const parts = lesson.split(" - ");
+    return parts.length > 1 ? parts.slice(1).join(" - ") : lesson;
+  }
+
+  // Öğretmen formatındaki tam adı da not eşleşmesi için tutar
+  function buildTeacherLessonKey(lessonName){
+    const lesson = String(lessonName || "").trim();
+    if(!lesson || lesson === "-") return lesson || "-";
     return lesson;
   }
 
-  function buildTeacherLessonKey(className, lessonName){
-    const lesson = String(lessonName || "").trim();
-    if(!lesson || lesson === "-") return lesson || "-";
-    return lesson;
+  function normalizeGroupKey(lessonName){
+    return buildLessonKey(lessonName).toLocaleLowerCase("tr-TR");
   }
 
-  function normalizeGroupKey(className, lessonName){
-    const lesson = String(lessonName || "").trim();
-    if(!lesson || lesson === "-") return lesson || "-";
-
-    if(role === "student"){
-      return lesson.toLocaleLowerCase("tr-TR");
-    }
-
-    return buildTeacherLessonKey(className, lesson).toLocaleLowerCase("tr-TR");
-  }
-
-  function noteMatchesRow(entry, className, lessonName){
+  function noteMatchesRow(entry, lessonName){
     if(!entry || entry.type === "day") return false;
-
-    const lessonKey = buildLessonKey(className, lessonName);
-    if(entry.lesson === lessonKey) return true;
-
-    if(role === "student"){
-      return entry.lesson === buildTeacherLessonKey(className, lessonName);
-    }
-
-    return false;
+    const studentKey = buildLessonKey(lessonName);
+    if(entry.lesson === studentKey) return true;
+    // Öğretmen formatıyla kaydedilmiş notla da eşleş
+    return entry.lesson === buildTeacherLessonKey(lessonName);
   }
 
   function openNotesPage(params){
-    const url = new URL("notes.html", window.location.href);
+    const url = new URL("notes-student.html", window.location.href);
     Object.entries(params || {}).forEach(([key, value]) => {
       if(value === undefined || value === null) return;
       url.searchParams.set(key, String(value));
@@ -198,9 +187,9 @@
 
   function buildDays(){
     bar.innerHTML = "";
-    const active = isGuest
-      ? (appData.activeDays?.length ? appData.activeDays.slice().sort((a, b) => a - b) : [0, 1, 2, 3, 4])
-      : (appData.activeDays?.length ? appData.activeDays.slice().sort((a, b) => a - b) : [0, 1, 2, 3, 4]);
+    const active = appData.activeDays?.length
+      ? appData.activeDays.slice().sort((a, b) => a - b)
+      : [0, 1, 2, 3, 4];
 
     active.forEach((index) => {
       const day = document.createElement("div");
@@ -333,11 +322,10 @@
     rows.forEach((rowData, index) => {
       const row = document.createElement("div");
 
-      const className = rowData.class || "-";
       const lesson = rowData.lesson || "-";
-      const normalizedLessonName = normalizeGroupKey(className, lesson);
+      const normalizedLessonName = normalizeGroupKey(lesson);
       const time = rowData.timeIdx >= 0 ? slots[rowData.timeIdx] : "";
-      const hasNote = noteEntries.some((entry) => noteMatchesRow(entry, className, lesson));
+      const hasNote = noteEntries.some((entry) => noteMatchesRow(entry, lesson));
       const showNoteDot = hasNote && !seenLessonNames.has(normalizedLessonName);
 
       if(normalizedLessonName && lesson !== "-"){
@@ -345,24 +333,22 @@
       }
 
       row.className = showNoteDot ? "tblRow hasNote" : "tblRow";
-      row.dataset.lessonKey = lesson;
+      // Öğrenci: dataset'e öğrenci formatındaki anahtar yazılır
+      row.dataset.lessonKey = buildLessonKey(lesson);
+
       if(index === lessonState.current){
         row.classList.add("currentLesson");
       }else if(index === lessonState.next){
         row.classList.add("nextLesson");
       }
 
+      // Öğrenci: sınıf kısmı CSS ile zaten gizlenir, ama yine de
+      // sadece ders adını (sınıf öneki olmadan) gösteririz
+      const displayLesson = buildLessonKey(lesson);
+
       row.innerHTML = [
         '<div class="tblNo"><span class="rowNoteDot"></span>' + (index + 1) + "</div>",
-        (function(){
-          const sep = lesson.indexOf(" - ");
-          if(sep === -1) return '<div class="tblLes" style="color:' + lessonColorOf(lesson, rowData.color) + '">' + lesson + "</div>";
-          const cls = lesson.slice(0, sep);
-          const name = lesson.slice(sep + 3);
-          return '<div class="tblLes" style="color:' + lessonColorOf(lesson, rowData.color) + '">'
-            + '<span class="tblClsPrefix">' + cls + ' </span>'
-            + name + "</div>";
-        })(),
+        '<div class="tblLes" style="color:' + lessonColorOf(lesson, rowData.color) + '">' + displayLesson + "</div>",
         '<div class="tblTime">' + time + "</div>"
       ].join("");
 
@@ -408,7 +394,7 @@
 
     if(isAlreadyActive){
       if(isGuest && dayName !== todayName){
-        AppShell.showRegisterPrompt("Bu gunun tum notlarini acmak icin kayit olun.");
+        AppShell.showRegisterPrompt("Bu günün tüm notlarını açmak için kayıt olun.");
         return;
       }
       openLessonNoteForm(dayName, lessonKey);
@@ -465,18 +451,16 @@
     if(!row) return;
 
     const dayChip = document.querySelector(".day.active");
-
     const dayName = dayChip ? dayChip.textContent.trim() : "";
     const lesson = row.dataset.lessonKey || "";
 
     if(!lesson || lesson === "-" || !dayName) return;
     if(isGuest && dayName !== todayName){
-      AppShell.showRegisterPrompt("Bu gun disindaki ders notlarini acmak icin kayit olun.");
+      AppShell.showRegisterPrompt("Bu gün dışındaki ders notlarını açmak için kayıt olun.");
       return;
     }
 
-    const lessonKey = buildLessonKey("", lesson);
-    openLessonNoteForm(dayName, lessonKey);
+    openLessonNoteForm(dayName, lesson);
   });
 })();
 </script>

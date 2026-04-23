@@ -1,0 +1,447 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
+<meta http-equiv="Pragma" content="no-cache"/>
+<meta http-equiv="Expires" content="0"/>
+<title>Ders Takip - Anasayfa</title>
+<script type="module" src="assets/js/firebase.js?v=20260409-2"></script>
+<script src="assets/js/app-shell.js?v=20260409-2"></script>
+<script type="module" src="assets/js/auth.js?v=20260409-2"></script>
+<link rel="stylesheet" href="assets/css/tokens.css?v=20260409-2">
+<link rel="stylesheet" href="assets/css/base.css?v=20260409-2">
+<link rel="stylesheet" href="assets/css/components.css?v=20260409-2">
+<link rel="stylesheet" href="assets/css/pages/home-teacher.css?v=20260409-2">
+<link rel="icon" href="icons/icon-192.png" />
+</head>
+<body>
+  <div class="appFrame">
+    <div class="appBorder">
+      <div class="appInner">
+        <div class="topCard">
+          <div class="brand">
+            <div class="brand-icon">
+              <div class="line-1"></div>
+              <div class="line-2"></div>
+              <div class="line-3"></div>
+            </div>
+            <span class="brandWord">DERS</span>
+            <span class="orange">TAKIP</span>
+          </div>
+
+          <div class="daysWrap">
+            <div class="daysScroll" aria-label="Günler"></div>
+          </div>
+        </div>
+
+        <div class="tblCard" aria-label="Ders Tablosu">
+          <div id="tblRows">
+            <div class="tblHead">
+              <div class="tblTh">#</div>
+              <div class="tblTh">DERS ADI</div>
+              <div class="tblTh tblThTime">SAAT</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="tblNotesWrap"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="nav">
+    <div class="navItem" data-nav="index">
+      <span class="icon">today</span>
+      GÜNLÜK
+    </div>
+    <div class="navItem" data-nav="weekly">
+      <span class="icon">view_week</span>
+      HAFTALIK
+    </div>
+    <div class="navItem" data-nav="notes">
+      <span class="icon">edit_note</span>
+      NOTLAR
+    </div>
+    <div class="navItem" data-nav="settings">
+      <span class="icon">settings</span>
+      AYARLAR
+    </div>
+  </div>
+
+<script>
+(function(){
+  const STORAGE_KEY = "ayarlar";
+  const dayNames = AppShell.DAY_NAMES;
+
+  const appData = AppShell.safeJsonParse(localStorage.getItem(STORAGE_KEY), null) || {
+    settings: {
+      start: "08:15",
+      duration: 40,
+      break: 10,
+      lunch: 45,
+      lunchNo: 5,
+      timeMode: "Giris-Cikis"
+    },
+    activeDays: [0, 1, 2, 3, 4],
+    classes: [],
+    lessons: [],
+    schedule: {},
+    lastColor: "#ff7a00"
+  };
+
+  // Öğretmen rolü — sabit, koşullu dal yok
+  const isGuest = AppShell.isGuestUser(appData);
+  const todayName = AppShell.getTodayDayName();
+  const bar = document.querySelector(".daysScroll");
+
+  // Öğretmende ders adı olduğu gibi gösterilir, dönüşüm yapılmaz
+  function buildLessonKey(lessonName){
+    const lesson = String(lessonName || "").trim();
+    if(!lesson || lesson === "-") return lesson || "-";
+    return lesson;
+  }
+
+  function normalizeGroupKey(lessonName){
+    return buildLessonKey(lessonName).toLocaleLowerCase("tr-TR");
+  }
+
+  function noteMatchesRow(entry, lessonName){
+    if(!entry || entry.type === "day") return false;
+    return entry.lesson === buildLessonKey(lessonName);
+  }
+
+  function openNotesPage(params){
+    const url = new URL("notes-teacher.html", window.location.href);
+    Object.entries(params || {}).forEach(([key, value]) => {
+      if(value === undefined || value === null) return;
+      url.searchParams.set(key, String(value));
+    });
+    window.location.href = url.pathname + "?" + url.searchParams.toString();
+  }
+
+  function openLessonNoteForm(dayName, lessonName){
+    openNotesPage({ mode: "lesson", day: dayName || "", lesson: lessonName || "" });
+  }
+
+  function pad2(number){
+    return String(number).padStart(2, "0");
+  }
+
+  function generateTimeSlots(count){
+    const slots = [];
+    let current = appData.settings?.start || "08:15";
+    const duration = parseInt(appData.settings?.duration ?? 40, 10);
+    const breakDuration = parseInt(appData.settings?.break ?? 10, 10);
+    const lunch = parseInt(appData.settings?.lunch ?? 45, 10);
+    const lunchNo = parseInt(appData.settings?.lunchNo ?? 5, 10);
+    const mode = appData.settings?.timeMode || "Giris-Cikis";
+
+    for(let index = 1; index <= Math.max(count, 1); index += 1){
+      let [hour, minute] = current.split(":").map(Number);
+      const start = pad2(hour) + ":" + pad2(minute);
+
+      minute += duration;
+      hour += Math.floor(minute / 60);
+      minute %= 60;
+      const end = pad2(hour) + ":" + pad2(minute);
+
+      slots.push(mode === "Giris-Cikis" ? start + "-" + end : start);
+
+      if(index === lunchNo) minute += lunch;
+      else minute += breakDuration;
+
+      hour += Math.floor(minute / 60);
+      minute %= 60;
+      current = pad2(hour) + ":" + pad2(minute);
+    }
+
+    return slots;
+  }
+
+  function buildDays(){
+    bar.innerHTML = "";
+    const active = appData.activeDays?.length
+      ? appData.activeDays.slice().sort((a, b) => a - b)
+      : [0, 1, 2, 3, 4];
+
+    active.forEach((index) => {
+      const day = document.createElement("div");
+      day.className = "day";
+      day.textContent = dayNames[index] || "";
+      bar.appendChild(day);
+    });
+
+    return Array.from(bar.querySelectorAll(".day"));
+  }
+
+  const chips = buildDays();
+  if(!chips.length) return;
+
+  function ensureVisible(chip){
+    chip.scrollIntoView({ behavior: "smooth", inline: "nearest", block: "nearest" });
+  }
+
+  function fixLessonColor(hex){
+    if(!hex) return "var(--text-primary)";
+
+    const clean = hex.replace("#", "");
+    const r = parseInt(clean.substring(0, 2), 16);
+    const g = parseInt(clean.substring(2, 4), 16);
+    const b = parseInt(clean.substring(4, 6), 16);
+    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+
+    if(luminance < 0.25){
+      return "rgb(" + Math.min(r + 120, 255) + "," + Math.min(g + 120, 255) + "," + Math.min(b + 120, 255) + ")";
+    }
+
+    if(luminance > 0.8){
+      return "rgb(" + Math.max(r - 120, 0) + "," + Math.max(g - 120, 0) + "," + Math.max(b - 120, 0) + ")";
+    }
+
+    return "#" + clean;
+  }
+
+  function lessonColorOf(lessonName, fallbackColor){
+    if(fallbackColor) return fixLessonColor(fallbackColor);
+
+    const list = appData.lessons || [];
+    const found = list.find((entry) => (entry?.name || "") === (lessonName || ""));
+    return fixLessonColor(found?.color || appData.lastColor || "#ff7a00");
+  }
+
+  function timeTextToMinutes(value){
+    const raw = String(value || "").trim();
+    if(!raw || !raw.includes(":")) return null;
+
+    const [hourText, minuteText] = raw.split(":");
+    const hour = parseInt(hourText, 10);
+    const minute = parseInt(minuteText, 10);
+
+    if(Number.isNaN(hour) || Number.isNaN(minute)) return null;
+    return (hour * 60) + minute;
+  }
+
+  function slotRangeToMinutes(slotText){
+    const raw = String(slotText || "").trim();
+    if(!raw) return null;
+
+    if(raw.includes("-")){
+      const [startText, endText] = raw.split("-");
+      const start = timeTextToMinutes(startText);
+      const end = timeTextToMinutes(endText);
+      if(start === null || end === null) return null;
+      return { start, end };
+    }
+
+    const start = timeTextToMinutes(raw);
+    if(start === null) return null;
+
+    const duration = parseInt(appData.settings?.duration ?? 40, 10);
+    return { start, end: start + duration };
+  }
+
+  function lessonStateIndexOf(rows, slots, isToday){
+    if(!isToday){
+      return { current: -1, next: -1 };
+    }
+
+    const now = new Date();
+    const currentMinutes = (now.getHours() * 60) + now.getMinutes();
+    let nextIndex = -1;
+
+    for(let index = 0; index < rows.length; index += 1){
+      const rowData = rows[index];
+      if(typeof rowData?.timeIdx !== "number" || rowData.timeIdx < 0) continue;
+
+      const range = slotRangeToMinutes(slots[rowData.timeIdx]);
+      if(!range) continue;
+
+      if(currentMinutes >= range.start && currentMinutes < range.end){
+        return { current: index, next: -1 };
+      }
+
+      if(nextIndex === -1 && currentMinutes < range.start){
+        nextIndex = index;
+      }
+    }
+
+    return { current: -1, next: nextIndex };
+  }
+
+  function renderTableRows(rows, isToday){
+    const holder = document.getElementById("tblRows");
+    if(!holder) return;
+
+    const noteEntries = AppShell.safeJsonParse(localStorage.getItem("app_notes"), []) || [];
+    const seenLessonNames = new Set();
+
+    holder.querySelectorAll(".tblRow").forEach((element) => element.remove());
+
+    if(!rows?.length){
+      const row = document.createElement("div");
+      row.className = "tblRow";
+      row.innerHTML = [
+        '<div class="tblNo">-</div>',
+        '<div class="tblLes tblMuted">Bu gün için kayıt yok</div>',
+        '<div class="tblTime"></div>'
+      ].join("");
+      holder.appendChild(row);
+      return;
+    }
+
+    const slots = generateTimeSlots(rows.length);
+    const lessonState = lessonStateIndexOf(rows, slots, isToday);
+
+    rows.forEach((rowData, index) => {
+      const row = document.createElement("div");
+
+      const lesson = rowData.lesson || "-";
+      const normalizedLessonName = normalizeGroupKey(lesson);
+      const time = rowData.timeIdx >= 0 ? slots[rowData.timeIdx] : "";
+      const hasNote = noteEntries.some((entry) => noteMatchesRow(entry, lesson));
+      const showNoteDot = hasNote && !seenLessonNames.has(normalizedLessonName);
+
+      if(normalizedLessonName && lesson !== "-"){
+        seenLessonNames.add(normalizedLessonName);
+      }
+
+      row.className = showNoteDot ? "tblRow hasNote" : "tblRow";
+      row.dataset.lessonKey = lesson;
+
+      if(index === lessonState.current){
+        row.classList.add("currentLesson");
+      }else if(index === lessonState.next){
+        row.classList.add("nextLesson");
+      }
+
+      // Öğretmen: "9A - Matematik" → sınıf + ders adı ayrı span olarak gösterilir
+      row.innerHTML = [
+        '<div class="tblNo"><span class="rowNoteDot"></span>' + (index + 1) + "</div>",
+        (function(){
+          const sep = lesson.indexOf(" - ");
+          if(sep === -1) return '<div class="tblLes" style="color:' + lessonColorOf(lesson, rowData.color) + '">' + lesson + "</div>";
+          const cls = lesson.slice(0, sep);
+          const name = lesson.slice(sep + 3);
+          return '<div class="tblLes" style="color:' + lessonColorOf(lesson, rowData.color) + '">'
+            + '<span class="tblClsPrefix">' + cls + ' </span>'
+            + name + "</div>";
+        })(),
+        '<div class="tblTime">' + time + "</div>"
+      ].join("");
+
+      holder.appendChild(row);
+    });
+  }
+
+  const ourToday = AppShell.getTodayDayIndex();
+
+  function findChipIndexByDay(ourDayIdx){
+    const name = dayNames[ourDayIdx];
+    return chips.findIndex((chip) => chip.textContent.trim().toLowerCase() === name.toLowerCase());
+  }
+
+  let currentIndex = findChipIndexByDay(ourToday);
+  if(currentIndex < 0) currentIndex = 0;
+
+  function setDayByIndex(nextIndex, options = { scroll: true }){
+    const total = chips.length;
+    currentIndex = ((nextIndex % total) + total) % total;
+
+    chips.forEach((chip) => chip.classList.remove("active"));
+    const activeChip = chips[currentIndex];
+    activeChip.classList.add("active");
+
+    if(options.scroll) ensureVisible(activeChip);
+
+    const dayName = activeChip.textContent.trim();
+    const rows = AppShell.getScheduleRowsForDay(appData, dayName);
+    renderTableRows(rows, dayName === todayName);
+  }
+
+  setDayByIndex(currentIndex, { scroll: true });
+
+  bar.addEventListener("click", (event) => {
+    const chip = event.target.closest(".day");
+    if(!chip || !bar.contains(chip)) return;
+
+    const index = chips.indexOf(chip);
+    const isAlreadyActive = chip.classList.contains("active");
+    const dayName = chip.textContent.trim();
+    const lessonKey = "__DAY__-" + dayName;
+
+    if(isAlreadyActive){
+      if(isGuest && dayName !== todayName){
+        AppShell.showRegisterPrompt("Bu günün tüm notlarını açmak için kayıt olun.");
+        return;
+      }
+      openLessonNoteForm(dayName, lessonKey);
+    }else{
+      setDayByIndex(index, { scroll: true });
+    }
+  }, { passive: true });
+
+  const swipeArea = document.querySelector(".appBorder") || document.body;
+  let startX = 0;
+  let startY = 0;
+  let tracking = false;
+
+  function startSwipe(x, y){
+    startX = x;
+    startY = y;
+    tracking = true;
+  }
+
+  function endSwipe(x, y){
+    if(!tracking) return;
+    tracking = false;
+
+    const dx = x - startX;
+    const dy = y - startY;
+
+    if(Math.abs(dx) < 35) return;
+    if(Math.abs(dx) < Math.abs(dy) + 10) return;
+
+    if(dx < 0) setDayByIndex(currentIndex + 1, { scroll: true });
+    else setDayByIndex(currentIndex - 1, { scroll: true });
+  }
+
+  swipeArea.addEventListener("touchstart", (event) => {
+    const touch = event.touches[0];
+    startSwipe(touch.clientX, touch.clientY);
+  }, { passive: true });
+
+  swipeArea.addEventListener("touchend", (event) => {
+    const touch = event.changedTouches[0];
+    endSwipe(touch.clientX, touch.clientY);
+  }, { passive: true });
+
+  swipeArea.addEventListener("pointerdown", (event) => {
+    startSwipe(event.clientX, event.clientY);
+  });
+
+  swipeArea.addEventListener("pointerup", (event) => {
+    endSwipe(event.clientX, event.clientY);
+  });
+
+  document.getElementById("tblRows")?.addEventListener("click", (event) => {
+    const row = event.target.closest(".tblRow");
+    if(!row) return;
+
+    const dayChip = document.querySelector(".day.active");
+    const dayName = dayChip ? dayChip.textContent.trim() : "";
+    const lesson = row.dataset.lessonKey || "";
+
+    if(!lesson || lesson === "-" || !dayName) return;
+    if(isGuest && dayName !== todayName){
+      AppShell.showRegisterPrompt("Bu gün dışındaki ders notlarını açmak için kayıt olun.");
+      return;
+    }
+
+    openLessonNoteForm(dayName, buildLessonKey(lesson));
+  });
+})();
+</script>
+</body>
+</html>
