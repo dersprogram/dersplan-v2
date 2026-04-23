@@ -283,3 +283,40 @@
 .planSwipe .spCard {
   position: relative;
 }
+
+/* ============================================
+   EDGE-TO-EDGE SWIPE — öğretmen not sayfası
+   ============================================ */
+
+/* planCard: not kartlarıyla aynı genişlik, padding sıfır */
+.planCard {
+  padding-left: 0;
+  padding-right: 0;
+  margin-left: 0;
+  margin-right: 0;
+  height: calc(46vh + 50px);
+  max-height: 490px;
+}
+
+/* planSwipe: explicit genişlik — flex % hesabı için zorunlu */
+.planCard .planSwipe {
+  width: 100%;
+}
+
+/* swipeWrap: ilk/son kart peek boşluğu */
+.planSwipe .swipeWrap {
+  padding-left: 12px;
+  padding-right: 12px;
+  gap: 10px;
+}
+
+/* spCard: aktif kart geniş, her iki yanda ~18px peek */
+.planSwipe .spCard {
+  width: calc(100% - 2 * var(--frame-padding));
+  max-width: none;
+  transform: none;
+}
+
+.planSwipe .spCard:active {
+  transform: none;
+}
