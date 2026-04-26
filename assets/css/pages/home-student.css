@@ -42,7 +42,7 @@
 }
 
 .brand .brandWord{
-  color: var(--text-secondary);
+  color: var(--text-primary);
 }
 
 .brand-icon{
@@ -58,7 +58,7 @@
   position: absolute;
   left: 0;
   height: 2px;
-  background: var(--text-secondary);
+  background: var(--text-primary);
   border-radius: 2px;
 }
 
