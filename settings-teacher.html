@@ -276,12 +276,12 @@ if(window.location.hostname === "127.0.0.1"){
 
 <!-- Yıllık Plan Modal -->
 <div id="planModalOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:9999; align-items:center; justify-content:center;">
-  <div style="background:var(--color-surface,#1e2330); border:1px solid var(--color-accent,#ff7a00); border-radius:16px; padding:20px; width:88%; max-width:360px;">
-    <div style="font-size:.85rem; font-weight:900; color:var(--color-accent,#ff7a00); margin-bottom:14px;" id="planModalTitle">Plan Seç</div>
+  <div style="background:var(--color-bg-card); border:1px solid var(--color-accent); border-radius:16px; padding:20px; width:88%; max-width:360px;">
+    <div style="font-size:.85rem; font-weight:900; color:var(--color-accent); margin-bottom:14px;" id="planModalTitle">Plan Seç</div>
 
     <div style="margin-bottom:12px;">
-      <div style="font-size:.65rem; color:#aaa; margin-bottom:5px;">SINIF SEVİYESİ</div>
-      <select id="planClassSelect" onchange="loadPlanList()" style="width:100%; padding:8px; border-radius:8px; background:var(--color-bg,#13171f); border:1px solid #444; color:#fff; font-size:.8rem;">
+      <div style="font-size:var(--font-xs); color:var(--text-muted); margin-bottom:5px;">SINIF SEVİYESİ</div>
+      <select id="planClassSelect" onchange="loadPlanList()" style="width:100%; padding:8px; border-radius:8px; background:var(--bg-input); border:1px solid var(--border-normal); color:var(--text-primary); font-size:.8rem;">
         <option value="">Seçin...</option>
         <option value="1">1. Sınıf</option><option value="2">2. Sınıf</option>
         <option value="3">3. Sınıf</option><option value="4">4. Sınıf</option>
@@ -293,17 +293,17 @@ if(window.location.hostname === "127.0.0.1"){
     </div>
 
     <div style="margin-bottom:16px;">
-      <div style="font-size:.65rem; color:#aaa; margin-bottom:5px;">YILLIK PLAN</div>
-      <div id="planList" style="max-height:180px; overflow-y:auto; border:1px solid #333; border-radius:8px; padding:6px;">
-        <div style="color:#666; font-size:.75rem; padding:8px;">Önce sınıf seviyesi seçin</div>
+      <div style="font-size:var(--font-xs); color:var(--text-muted); margin-bottom:5px;">YILLIK PLAN</div>
+      <div id="planList" style="max-height:180px; overflow-y:auto; border:1px solid var(--border-normal); border-radius:8px; padding:6px;">
+        <div style="color:var(--text-muted); font-size:var(--font-xs); padding:8px;">Önce sınıf seviyesi seçin</div>
       </div>
     </div>
 
-    <div id="planSelectedInfo" style="display:none; background:rgba(255,122,0,0.1); border:1px solid var(--color-accent,#ff7a00); border-radius:8px; padding:8px; margin-bottom:12px; font-size:.72rem; color:var(--color-accent,#ff7a00);"></div>
+    <div id="planSelectedInfo" style="display:none; background:var(--color-accent-soft); border:1px solid var(--color-accent); border-radius:8px; padding:8px; margin-bottom:12px; font-size:.72rem; color:var(--color-accent);"></div>
 
     <div style="display:flex; gap:8px;">
-      <button onclick="closePlanModal()" style="flex:1; padding:10px; border-radius:8px; background:transparent; border:1px solid #555; color:#aaa; font-size:.75rem; cursor:pointer;">İptal</button>
-      <button id="planSaveBtn" onclick="savePlanSelection()" style="flex:1; padding:10px; border-radius:8px; background:var(--color-accent,#ff7a00); border:none; color:#000; font-weight:900; font-size:.75rem; cursor:pointer;" disabled>Kaydet</button>
+      <button onclick="closePlanModal()" style="flex:1; padding:10px; border-radius:8px; background:transparent; border:1px solid var(--border-strong); color:var(--text-muted); font-size:.75rem; cursor:pointer;">İptal</button>
+      <button id="planSaveBtn" onclick="savePlanSelection()" style="flex:1; padding:10px; border-radius:8px; background:var(--color-accent); border:none; color:#000; font-weight:900; font-size:.75rem; cursor:pointer;" disabled>Kaydet</button>
     </div>
   </div>
 </div>
@@ -817,7 +817,7 @@ function openPlanModal(lessonIndex, event){
     classSelect.value = "";
   }
 
-  document.getElementById("planList").innerHTML = '<div style="color:#666; font-size:.75rem; padding:8px;">Önce sınıf seviyesi seçin</div>';
+  document.getElementById("planList").innerHTML = '<div style="color:var(--text-muted); font-size:var(--font-xs); padding:8px;">Önce sınıf seviyesi seçin</div>';
   document.getElementById("planSelectedInfo").style.display = "none";
   document.getElementById("planSaveBtn").disabled = true;
 
@@ -838,11 +838,11 @@ async function loadPlanList(){
   const listEl = document.getElementById("planList");
 
   if(!grade){
-    listEl.innerHTML = '<div style="color:#666; font-size:.75rem; padding:8px;">Önce sınıf seviyesi seçin</div>';
+    listEl.innerHTML = '<div style="color:var(--text-muted); font-size:var(--font-xs); padding:8px;">Önce sınıf seviyesi seçin</div>';
     return;
   }
 
-  listEl.innerHTML = '<div style="color:#aaa; font-size:.75rem; padding:8px;">Yükleniyor...</div>';
+  listEl.innerHTML = '<div style="color:var(--text-muted); font-size:var(--font-xs); padding:8px;">Yükleniyor...</div>';
 
   try{
     const { getDatabase, ref, get } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js");
@@ -852,7 +852,7 @@ async function loadPlanList(){
     const snapshot = await get(ref(db, "plan-index/" + grade));
 
     if(!snapshot.exists()){
-      listEl.innerHTML = '<div style="color:#888; font-size:.75rem; padding:8px;">Bu sınıf için plan bulunamadı</div>';
+      listEl.innerHTML = '<div style="color:var(--text-muted); font-size:var(--font-xs); padding:8px;">Bu sınıf için plan bulunamadı</div>';
       return;
     }
 
@@ -870,14 +870,14 @@ async function loadPlanList(){
       const displayName = adValue || key.replace(/-/g, " ");
       return '<div class="plan-list-item' + (isSelected ? " selected" : "") + '" ' +
         'onclick="selectPlan(\'' + path + '\')" ' +
-        'style="padding:10px 8px; border-radius:6px; cursor:pointer; font-size:.78rem; border-bottom:1px solid #2a2a2a; ' +
-        (isSelected ? "background:rgba(255,122,0,0.15); color:var(--color-accent,#ff7a00);" : "color:#ddd;") + '">' +
+        'style="padding:10px 8px; border-radius:6px; cursor:pointer; font-size:.78rem; border-bottom:1px solid var(--border-thin); ' +
+        (isSelected ? "background:var(--color-accent-soft); color:var(--color-accent);" : "color:var(--text-primary);") + '">' +
         (isSelected ? "✓ " : "") + displayName +
         '</div>';
     }).join("");
 
   }catch(err){
-    listEl.innerHTML = '<div style="color:#e74c3c; font-size:.75rem; padding:8px;">Hata: ' + (err.message || "Bağlantı hatası") + '</div>';
+    listEl.innerHTML = '<div style="color:var(--color-danger); font-size:var(--font-xs); padding:8px;">Hata: ' + (err.message || "Bağlantı hatası") + '</div>';
   }
 }
 
@@ -887,8 +887,8 @@ function selectPlan(path){
   document.querySelectorAll(".plan-list-item").forEach((el) => {
     const onclick = el.getAttribute("onclick") || "";
     const isThis = onclick.includes("'" + path + "'");
-    el.style.background = isThis ? "rgba(255,122,0,0.15)" : "";
-    el.style.color = isThis ? "var(--color-accent,#ff7a00)" : "#ddd";
+    el.style.background = isThis ? "var(--color-accent-soft)" : "";
+    el.style.color = isThis ? "var(--color-accent)" : "var(--text-primary)";
   });
 
   const infoEl = document.getElementById("planSelectedInfo");

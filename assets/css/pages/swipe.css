@@ -65,8 +65,8 @@
   scroll-snap-align: center;
   scroll-snap-stop: always;
   border-radius: 14px;
-  background: var(--card-bg, #1e293b);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--color-bg-card);
+  border: 1px solid var(--border-thin);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
 
   display: flex;
@@ -91,7 +91,7 @@
   color: #fff;
   padding: 10px 12px;
   font-weight: 600;
-  font-size: 13px;
+  font-size: 0.87rem;
   text-align: center;
   border-radius: 14px 14px 0 0;
 }
@@ -114,18 +114,18 @@
 .planSwipe .spBody::-webkit-scrollbar { width: 3px; }
 .planSwipe .spBody::-webkit-scrollbar-track { background: transparent; }
 .planSwipe .spBody::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2);
+  background: var(--border-normal);
   border-radius: 10px;
 }
 
 /* --- Etiket --- */
 .planSwipe .spLabel {
   display: block;
-  font-size: 11px;
+  font-size: var(--font-xs);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.6px;
-  color: #ff9a2a;
+  color: var(--color-accent);
   margin-top: 10px;
   margin-bottom: 2px;
 }
@@ -135,9 +135,9 @@
 /* --- Değer metni — TAMAMI GÖRÜNÜR --- */
 .planSwipe .spValue {
   display: block;
-  font-size: 13px;
+  font-size: 0.87rem;
   font-weight: 500;
-  color: var(--text-primary, #fff);
+  color: var(--text-primary);
   overflow: visible;
   word-break: break-word;
   line-height: 1.5;
@@ -155,9 +155,9 @@
   padding: 0;
   background: transparent;
   border: none;
-  font-size: 13px;
+  font-size: 0.87rem;
   font-weight: 600;
-  color: var(--text-primary, #fff);
+  color: var(--text-primary);
 }
 
 .plan-title-outside::before {
@@ -196,7 +196,7 @@
 .planSwipe .spHeader {
   background: linear-gradient(135deg, #f76b00 0%, #ffaa33 100%);
   padding: 11px 14px;
-  font-size: 13.5px;
+  font-size: 0.9rem;
   letter-spacing: 0.3px;
   text-shadow: 0 1px 3px rgba(0,0,0,0.25);
   box-shadow: 0 3px 10px rgba(255,120,0,0.3);
@@ -216,7 +216,7 @@
   width: 5px;
   height: 5px;
   border-radius: 50%;
-  background: rgba(255,255,255,0.2);
+  background: var(--border-strong);
   transition: all 0.3s ease;
 }
 
@@ -230,7 +230,7 @@
 .planSwipe .spLabel {
   margin-top: 12px;
   padding-top: 10px;
-  border-top: 1px solid rgba(255,255,255,0.05);
+  border-top: 1px solid var(--border-thin);
 }
 
 .planSwipe .spLabel:first-child {
@@ -241,14 +241,14 @@
 
 /* Value — biraz daha okunabilir */
 .planSwipe .spValue {
-  font-size: 13.5px;
-  color: rgba(255,255,255,0.92);
+  font-size: 0.9rem;
+  color: var(--text-primary);
   margin-top: 3px;
 }
 
 /* Plan başlığı — ikon ve yazı */
 .plan-title-outside {
-  font-size: 12px;
+  font-size: 0.8rem;
   letter-spacing: 0.8px;
   text-transform: none;
   opacity: 0.75;
@@ -275,9 +275,13 @@
   left: 0;
   right: 0;
   height: 28px;
-  background: linear-gradient(transparent, rgba(18,28,45,0.85));
+  background: linear-gradient(transparent, rgba(14,22,36,0.88));
   border-radius: 0 0 14px 14px;
   pointer-events: none;
+}
+
+:root[data-theme="light"] .planSwipe .spCard::after {
+  background: linear-gradient(transparent, rgba(255,255,255,0.9));
 }
 
 .planSwipe .spCard {
