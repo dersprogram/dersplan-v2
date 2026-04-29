@@ -392,22 +392,54 @@ function renderSwipe(data){
   );
 
   filtered.forEach(item => {
-    const knownKeys = FIELD_ORDER.filter(k => k in item);
-    const unknownKeys = Object.keys(item).filter(k => k !== "hafta" && !FIELD_ORDER.includes(k));
-    const orderedKeys = [...knownKeys, ...unknownKeys];
+    let card;
 
-    const bodyHtml = orderedKeys
-      .map(key =>
-        `<span class="spLabel">${formatFieldLabel(key)}</span>` +
-        `<span class="spValue">${item[key] || "-"}</span>`
-      ).join("");
+    if(item.tip === "ozel"){
+      // Tatil / özel hafta kartı — sade, tatil etiketi göster
+      const tatilMetin = item.hafta || item.aciklama || "";
 
-    const card = `
-      <div class="spCard">
-        <div class="spHeader">${item.hafta || ""}</div>
-        <div class="spBody">${bodyHtml}</div>
-      </div>
-    `;
+      // Tatil türüne göre etiket belirle
+      let tatilEtiket = "Tatil";
+      const m = tatilMetin.toLocaleLowerCase("tr");
+      if(m.includes("yarıyıl") || m.includes("yari yil")) tatilEtiket = "Yarıyıl Tatili";
+      else if(m.includes("1. dönem") || m.includes("1. ara")) tatilEtiket = "1. Ara Tatil";
+      else if(m.includes("2. dönem") || m.includes("2. ara")) tatilEtiket = "2. Ara Tatil";
+      else if(m.includes("ara tatil")) tatilEtiket = "Ara Tatil";
+      else if(m.includes("sosyal etkinlik")) tatilEtiket = "Sosyal Etkinlik Haftası";
+      else if(m.includes("okul temelli")) tatilEtiket = "Okul Temelli Planlama";
+
+      // Tarih aralığını hafta metninden çıkar
+      const tarihMatch = tatilMetin.match(/(\d[\d\s\-–A-Za-zÇçĞğİıÖöŞşÜü]+(?:Kasım|Ocak|Şubat|Mart|Nisan|Mayıs|Haziran|Temmuz|Ağustos|Eylül|Ekim|Kasım|Aralık)\s*\d{0,4})/i);
+      const tarihAraligi = tarihMatch ? tarihMatch[0].trim() : "";
+
+      card = `
+        <div class="spCard spCard--tatil">
+          <div class="spHeader spHeader--tatil">${tatilEtiket}</div>
+          <div class="spBody spBody--tatil">
+            ${tarihAraligi ? `<span class="tatilTarih">${tarihAraligi}</span>` : ""}
+          </div>
+        </div>
+      `;
+    } else {
+      // Normal ders kartı
+      const knownKeys = FIELD_ORDER.filter(k => k in item);
+      const unknownKeys = Object.keys(item).filter(k => k !== "hafta" && k !== "tip" && !FIELD_ORDER.includes(k));
+      const orderedKeys = [...knownKeys, ...unknownKeys];
+
+      const bodyHtml = orderedKeys
+        .map(key =>
+          `<span class="spLabel">${formatFieldLabel(key)}</span>` +
+          `<span class="spValue">${item[key] || "-"}</span>`
+        ).join("");
+
+      card = `
+        <div class="spCard">
+          <div class="spHeader">${item.hafta || ""}</div>
+          <div class="spBody">${bodyHtml}</div>
+        </div>
+      `;
+    }
+
     wrap.innerHTML += card;
   });
 

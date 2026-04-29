@@ -324,3 +324,55 @@
 .planSwipe .spCard:active {
   transform: none;
 }
+
+/* ============================================
+   TATİL KARTI — tip: ozel
+   ============================================ */
+
+.planSwipe .spCard--tatil {
+  background: linear-gradient(160deg,
+    rgba(255, 122, 0, 0.08) 0%,
+    rgba(255, 90, 0, 0.04) 100%
+  );
+  border: 1px solid rgba(255, 138, 31, 0.35);
+  box-shadow:
+    0 8px 28px rgba(0,0,0,0.35),
+    0 0 0 1px rgba(255,138,31,0.12);
+  justify-content: center;
+  align-items: center;
+}
+
+.planSwipe .spHeader--tatil {
+  background: linear-gradient(135deg, #c85000 0%, #ff7a00 60%, #ffaa33 100%);
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-align: center;
+  border-radius: 14px 14px 0 0;
+  padding: 14px 16px;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.3);
+}
+
+.planSwipe .spBody--tatil {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  gap: 12px;
+  padding: 20px 16px;
+}
+
+/* Tatil tarihi gösterimi */
+.planSwipe .tatilTarih {
+  display: inline-block;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: rgba(255,138,31,0.08);
+  border: 1px solid rgba(255,138,31,0.2);
+  border-radius: 8px;
+  padding: 6px 14px;
+  text-align: center;
+  line-height: 1.4;
+}
