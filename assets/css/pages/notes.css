@@ -9,14 +9,6 @@
   margin-bottom: 6px;
 }
 
-.card-head{
-  gap: 10px;
-  min-height: 0;
-  padding: 0px 2px;
-  font-size: .96rem;
-  line-height: 1.05;
-}
-
 .card .accordion{
   margin-top: 3px;
   max-height: 0;
@@ -247,27 +239,22 @@ input[type="date"]::-webkit-calendar-picker-indicator{
   max-height: 800px;
 }
 
-/* notes.css içindeki mevcut .card-head bloğunu bununla değiştir */
-.card-head {
-  display: flex !important;
-  align-items: center !important;
-  gap: 8px !important; /* İkonlar arası mesafeyi daralttık */
-  min-height: 22px !important; /* Fiziksel minimum yüksekliği sınırladık */
-  padding: 0px 2px !important; /* Üst-alt boşluğu tamamen sıfırladık */
-  font-size: 0.88rem !important; /* Yazıyı çok hafif küçülttük */
-  line-height: 1 !important; /* Yazının etrafındaki boşluğu öldürdük */
+.card-head{
+  gap: 8px;
+  min-height: 22px;
+  padding: 0 2px;
+  font-size: 0.88rem;
+  line-height: 1;
 }
 
-/* İkonları da küçültmezsek başlık daha fazla incelemez */
-.card-head .icon {
-  font-size: 18px !important; /* İkon boyutunu 22px'den 18px'e çektik */
-  width: 18px !important;
-  height: 18px !important;
+.card-head .icon{
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
 }
 
-/* Sağdaki ok (dropdown) ikonu için ince ayar */
-.card-head .arrowIcon {
-  font-size: 16px !important;
+.card-head .arrowIcon{
+  font-size: 16px;
 }
 .title {
   margin-top: 0;
@@ -303,7 +290,7 @@ input[type="date"]::-webkit-calendar-picker-indicator{
 }
 
 .card.open .cardNoteDot{
-  display: none !important;
+  display: none;
 }
 
 /* İçerik olmadığında liste ayracı görünmesin */

@@ -1,12 +1,10 @@
 body{
   visibility: hidden;
-}
-body.loaded{
-  visibility: visible;
+  padding-bottom: calc(var(--nav-height) + 42px);
 }
 
-body{
-  padding-bottom: calc(var(--nav-height) + 42px);
+body.loaded{
+  visibility: visible;
 }
 
 /* Accordion acilip kapanirken scrollbar genisligi degismesin. */
@@ -219,10 +217,7 @@ body{
   width: 100%;
 }
 
-.table-grid.teacher{
-  grid-template-columns: 15px 1fr 90px 18px;
-}
-
+.table-grid.teacher,
 .table-grid.student{
   grid-template-columns: 15px 1fr 90px 18px;
 }
@@ -279,12 +274,6 @@ body{
 }
 
 
-.menu button:hover{
-  padding-left: 16px;
-  color: var(--color-accent);
-  border-color: var(--color-accent);
-}
-/* MENU */
 .menu{
   border-top: 1px solid rgba(255,255,255,.06);
   margin-top: 8px;
@@ -294,7 +283,7 @@ body{
 .menu button{
   width: 100%;
   text-align: left;
-  padding: 12px 12px;
+  padding: 12px;
   background: none;
   border: 1px solid rgba(255,255,255,.25);
   border-radius: 10px;
@@ -304,23 +293,27 @@ body{
 }
 
 .menu button:first-child{
-  border: 1px solid rgba(255,255,255,.4);
-  color: var(--text-primary);
+  border-color: rgba(255,255,255,.4);
 }
+
 .menu button:nth-child(2){
   color: var(--color-accent);
   opacity: .9;
-  
 }
+
 .menu .danger{
   border-color: rgba(255,77,77,.4);
   color: #ff4d4d;
   font-weight: 600;
   margin-top: 4px;
-  
 }
 
-.menu button:hover,
+.menu button:hover{
+  padding-left: 16px;
+  color: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
 .menu button:focus{
   border-color: var(--color-accent);
 }
@@ -465,26 +458,25 @@ body{
 }
 
 
-/* Focus oldugunda vurgu */
 .role-chips input[id="studentClassInput"],
-.role-chips input[id="guestStudentClassInput"] {
+.role-chips input[id="guestStudentClassInput"]{
   width: 42px;
   height: 32px;
   padding: 0;
   text-align: center;
   font-size: 12px;
   color: var(--text-primary);
-  background: rgba(255, 255, 255, 0.08) !important;
-  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 999px;
   margin-left: 0;
   box-sizing: border-box;
 }
 
 #studentClassInput:focus,
-#guestStudentClassInput:focus {
-  border-color: var(--color-accent) !important;
-  background: rgba(var(--color-accent-rgb), 0.1) !important;
+#guestStudentClassInput:focus{
+  border-color: var(--color-accent);
+  background: rgba(var(--color-accent-rgb), 0.1);
   outline: none;
 }
 
@@ -496,10 +488,10 @@ body{
 }
 
 
-.roleRow {
+.roleRow{
   display: flex;
   align-items: center;
-  gap: 8px;           /* Boşluğu biraz daha daralttık */
+  gap: 8px;
   margin-left: 6px;
   margin-bottom: 16px;
 }
@@ -513,8 +505,7 @@ body{
   flex-shrink: 0;
 }
 
-/* Buton grubu ve Sınıf kutusunu yan yana getiren yapı */
-.role-chips {
+.role-chips{
   display: flex;
   align-items: center; 
   gap: 6px;

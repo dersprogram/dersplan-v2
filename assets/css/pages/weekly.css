@@ -274,7 +274,7 @@ body.portrait .lessonIndex{
 .headCell,
 .cornerCell,
 .timeCell{
-  border: none !important;
+  border: none;
 }
 
 body.portrait .timeCell .time{
@@ -301,27 +301,20 @@ body.portrait .lessonCell{
   min-height: 46px;
 }
 
-.lunchBreakRow {
-  /* Arka planı çok hafif turuncu yaparak belirginleştiriyoruz */
-  background: rgba(var(--color-accent-rgb), 0.05) !important;
-  
-  /* Yazı rengini ana turuncu (accent) yapıyoruz */
-  color: var(--color-accent) !important;
-  
-  /* Çerçeve rengini turuncu yapıyoruz */
-  border: 1px solid rgba(var(--color-accent-rgb), 0.3) !important;
-  
-  /* Görseldeki gibi ince ve zarif durması için */
+.lunchBreakRow{
+  background: rgba(var(--color-accent-rgb), 0.05);
+  color: var(--color-accent);
+  border: 1px solid rgba(var(--color-accent-rgb), 0.3);
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 8px; /* Hafif yuvarlatılmış köşeler */
-  margin: 2px;       /* Diğer hücrelerden hafif ayrışması için */
+  border-radius: 8px;
+  margin: 2px;
   min-height: auto;
- }
+}
 
 body.portrait .lunchBreakRow{
   min-height: 24px;
@@ -498,7 +491,7 @@ body.portrait .weekPageTitle .icon{
   }
 
 body.portrait .floatingBack{
-  display: none !important;
+  display: none;
 }
 
   
