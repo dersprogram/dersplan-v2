@@ -495,23 +495,41 @@ function scrollToCurrentWeek(data){
     "temmuz": 7, "ağustos": 8, "eylül": 9, "ekim": 10, "kasım": 11, "aralık": 12
   };
 
+  function yearFor(monthNum){ return monthNum >= 9 ? sepYear : sepYear + 1; }
+
   let currentIdx = 0;
   let found = false;
 
   data.forEach((item, i) => {
-    const match = (item.hafta || "").match(/(\d+)[^-\d]*-\s*(\d+)\s*([A-Za-zÇçĞğİıÖöŞşÜü]+)/);
-    if(!match) return;
+    const hafta = (item.hafta || "").toLowerCase();
+    let weekStart, weekEnd;
 
-    const startDay = parseInt(match[1]);
-    const endDay = parseInt(match[2]);
-    const monthStr = match[3].toLowerCase();
-    const monthNum = months[monthStr];
-    if(!monthNum) return;
+    // "27 Nisan - 1 Mayıs" — ay değişen, her iki ay açık
+    const cross = hafta.match(/(\d+)\s+([a-zçğışöü]+)\s*[-–]\s*(\d+)\s+([a-zçğışöü]+)/);
+    if(cross){
+      const sm = months[cross[2]], em = months[cross[4]];
+      if(!sm || !em) return;
+      weekStart = new Date(yearFor(sm), sm - 1, parseInt(cross[1]));
+      weekEnd   = new Date(yearFor(em), em - 1, parseInt(cross[3]));
+    } else {
+      // "13-17 Nisan" veya "27-1 Mayıs" (yalnızca bitiş ayı yazılı)
+      const same = hafta.match(/(\d+)[^-\d]*-\s*(\d+)\s*([a-zçğışöü]+)/);
+      if(!same) return;
+      const em = months[same[3]];
+      if(!em) return;
+      const startDay = parseInt(same[1]);
+      const endDay   = parseInt(same[2]);
+      if(startDay > endDay){
+        // Başlangıç günü bitiş gününden büyük → bir önceki ay
+        const sm = em === 1 ? 12 : em - 1;
+        weekStart = new Date(yearFor(sm), sm - 1, startDay);
+      } else {
+        weekStart = new Date(yearFor(em), em - 1, startDay);
+      }
+      weekEnd = new Date(yearFor(em), em - 1, endDay);
+    }
 
-    const year = monthNum >= 9 ? sepYear : sepYear + 1;
-    const weekStart = new Date(year, monthNum - 1, startDay);
     weekStart.setHours(0, 0, 0, 0);
-    const weekEnd = new Date(year, monthNum - 1, endDay);
     weekEnd.setHours(23, 59, 59, 999);
 
     if(today >= weekStart && today <= weekEnd){
@@ -531,10 +549,13 @@ function scrollToCurrentWeek(data){
 
   requestAnimationFrame(() => {
     const cards = wrap.querySelectorAll(".spCard");
-    if(cards[currentIdx]){
-      const cardWidth = cards[currentIdx].offsetWidth;
-      planSwipe.scrollLeft = currentIdx * cardWidth;
-    }
+    const card = cards[currentIdx];
+    if(!card) return;
+    // scroll-snap-align:center için: kartın merkezi = konteyner merkezi
+    const containerLeft = planSwipe.getBoundingClientRect().left;
+    const cardRect = card.getBoundingClientRect();
+    const cardScrollLeft = planSwipe.scrollLeft + cardRect.left - containerLeft;
+    planSwipe.scrollLeft = cardScrollLeft - (planSwipe.offsetWidth - card.offsetWidth) / 2;
   });
 }
 

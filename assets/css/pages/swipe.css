@@ -51,8 +51,8 @@
   flex-wrap: nowrap;
   gap: 0;
   height: 100%;
-  padding-left: 6px;
-  padding-right: 6px;
+  padding-left: 0px;
+  padding-right: 0px;
   align-items: stretch; /* ⭐ kartlar tam yüksekliği kaplasın */
 }
 
