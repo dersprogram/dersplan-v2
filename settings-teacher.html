@@ -1531,9 +1531,14 @@ document.querySelectorAll(".card-head").forEach((head) => {
 
 window.addEventListener("load", () => {
   document.body.classList.add("loaded");
-  if(new URLSearchParams(window.location.search).get("action") === "register"){
+  if(new URLSearchParams(window.location.search).get("action") === "showuser"){
     history.replaceState(null, "", window.location.pathname);
-    if(typeof goRegister === "function") goRegister();
+    const userCard = document.getElementById("userContent")?.closest(".card");
+    if(userCard && !userCard.classList.contains("open")){
+      userCard.classList.add("open");
+      userCard.querySelector(".arrow")?.classList.add("open");
+      setTimeout(() => userCard.scrollIntoView({ behavior: "smooth", block: "start" }), 80);
+    }
   }
 });
 </script>
