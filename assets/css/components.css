@@ -93,7 +93,7 @@
 }
 
 .card.open .accordion{
-  max-height: 500px;
+  max-height: 2000px;
 }
 
 .hidden{

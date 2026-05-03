@@ -13,6 +13,10 @@ body{
   scrollbar-gutter: stable;
 }
 
+html{
+  scroll-padding-bottom: calc(var(--nav-height) + 28px);
+}
+
 .appFrame,
 .appBorder{
   min-height: 100dvh;

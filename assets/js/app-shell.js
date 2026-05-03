@@ -366,7 +366,7 @@
       return;
     }
     const suffix = getRoleSuffix();
-    window.location.href = "settings" + suffix + ".html";
+    window.location.href = "settings" + suffix + ".html?action=register";
   }
 
   function ensureRegisterPrompt(){

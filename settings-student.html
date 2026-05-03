@@ -17,9 +17,29 @@
   font-size:.75rem;
   opacity:0.6;
   transition:opacity .2s;
+  position:relative;
 }
 .plan-btn:hover { opacity:1; }
 .plan-btn--set { opacity:1; }
+.plan-btn:not(.plan-btn--set)::after {
+  content:"Plan ekle";
+  position:absolute;
+  bottom:calc(100% + 5px);
+  left:50%;
+  transform:translateX(-50%);
+  background:#222;
+  color:#fff;
+  font-size:11px;
+  white-space:nowrap;
+  padding:3px 7px;
+  border-radius:4px;
+  pointer-events:none;
+  opacity:0;
+  transition:opacity .15s;
+}
+.plan-btn:not(.plan-btn--set):hover::after {
+  opacity:1;
+}
 </style>
 <title>Öğrenci - Ayarlar Paneli</title>
 <script>
@@ -249,7 +269,7 @@ if(window.location.hostname === "127.0.0.1"){
         </div>
         <div class="accordion">
           <div style="display:flex; gap:8px; margin-bottom:10px;">
-            <input class="input" id="lessonInp" placeholder="Örn: Matematik" style="flex:1"/>
+            <input class="input" id="lessonInp" placeholder="Ders Adı" style="flex:1"/>
             <div class="color-trigger" id="mainColorTrigger" onclick="openPicker(event, 'main')"></div>
             <button class="ctrl" onclick="addItem('lessons', 'lessonInp')" style="width:auto; padding:0 15px; background:var(--color-accent); font-weight:bold;">EKLE</button>
           </div>
@@ -891,6 +911,16 @@ function addItem(type, inputId){
   document.getElementById(inputId).value = "";
   saveAppData();
   renderSettingsUI();
+  if(type === "lessons"){
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      const last = document.getElementById("lessonList")?.lastElementChild;
+      if(!last) return;
+      const rect = last.getBoundingClientRect();
+      const navClearance = 62 + 14 + 16;
+      const overshoot = rect.bottom - (window.innerHeight - navClearance);
+      if(overshoot > 0) window.scrollBy({ top: overshoot, behavior: "smooth" });
+    }));
+  }
 }
 
 function removeItem(type, index){
@@ -925,7 +955,7 @@ function renderSettingsUI(){
     const hasPlan = entry.planPath ? true : false;
     const planIcon = isStudent ? "" : hasPlan
       ? '<span class="plan-btn plan-btn--set" onclick="openPlanModal(' + index + ', event)" title="Plan atandı">📋✓</span>'
-      : '<span class="plan-btn" onclick="openPlanModal(' + index + ', event)" title="Plan seç">📋</span>';
+      : '<span class="plan-btn" onclick="openPlanModal(' + index + ', event)" title="Plan ekle">📋</span>';
     return '<div class="chip">' +
       '<div class="swatch-small" style="background:' + entry.color + '" onclick="openPicker(event, ' + index + ')"></div>' +
       entry.name +
@@ -1124,6 +1154,16 @@ function hydrateControlsFromData(){
 
 function goRegister(){
   AppShell.hideRegisterPrompt();
+
+  const registerForm = document.getElementById("guestRegisterForm");
+  if(registerForm){
+    const card = registerForm.closest(".card");
+    if(card && !card.classList.contains("open")){
+      card.classList.add("open");
+      card.querySelector(".arrow")?.classList.add("open");
+    }
+  }
+
   const nameInput = document.getElementById("registerName");
   const emailInput = document.getElementById("registerEmail");
   const passwordInput = document.getElementById("registerPassword");
@@ -1459,6 +1499,10 @@ document.querySelectorAll(".card-head").forEach((head) => {
 
 window.addEventListener("load", () => {
   document.body.classList.add("loaded");
+  if(new URLSearchParams(window.location.search).get("action") === "register"){
+    history.replaceState(null, "", window.location.pathname);
+    if(typeof goRegister === "function") goRegister();
+  }
 });
 </script>
 </body>
